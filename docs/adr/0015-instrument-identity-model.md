@@ -1,0 +1,11 @@
+# Instruments are identified by kind-specific authorities, unified under a surrogate UUID
+
+Every Instrument has a UUID primary key and a `kind` enum (`mutual_fund`, `equity`, `gold_etf`, `physical_gold`, `crypto`, `fd`, `ppf`, `property`). Each kind declares its own identity authority; no flat identifier works across all kinds, and trying to force one would leak the market-data provider's primary key into the domain model.
+
+Mutual fund Instruments are identified by the AMFI scheme code (reaffirming ADR 0014). Direct vs Regular and Growth vs IDCW carry distinct AMFI codes and are therefore distinct Instruments — this is automatic, not a modelling choice. ISIN is a nullable, changeable attribute on the Instrument, not the identity key. Scheme renames update the `name` field in place; the identity key is unchanged. Mergers and consolidations are not an identity concern — the old scheme's AMFI code ceases to appear in new imports and its Position is closed, while the new scheme's Position gains the transferred units (close + reopen at the Account level).
+
+Equity Instruments (stocks, ETFs, SGBs) are identified by ISIN, which is the identifier demat statements supply. The NSE symbol is a mutable attribute used to join NSE bhavcopy market data. The NSE master `EQUITY_L.csv` maps ISIN ↔ symbol and is refreshed regularly. Symbol changes (rare) are handled by the latest mapping; historical symbol values can be retained for audit but are not needed for identity.
+
+Other kinds use ad-hoc identifiers: crypto via CoinGecko slug (or whichever API is the provider), physical gold via a user-assigned label (the Valuation Strategy determines price), FD and PPF via account numbers, property via a user-assigned name. These have no public-market-data identity to match and are entered directly rather than imported from a registrar.
+
+Benchmark assignment defaults to the asset class (e.g. NIFTY 50 TRI for equity MFs) but is overrideable per Instrument. This lets a small-cap fund declare NIFTY Smallcap 250 TRI instead of the default.
