@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phase 1 · Navigation Model · Wealth Tracker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f4f5f7; color: #172b4d; min-height: 100vh; }
+    .header { display: flex; align-items: center; gap: 10px; padding: 10px 20px; background: #fff; border-bottom: 1px solid #dfe1e6; }
+    .header h1 { font-size: 15px; font-weight: 600; }
+    .header .phase { font-size: 11px; color: #5e6c84; background: #ebecf0; padding: 2px 8px; border-radius: 3px; }
+    .header .subtitle { font-size: 12px; color: #5e6c84; margin-left: auto; }
+    .header .nav-link { font-size: 12px; color: #5e6c84; cursor: pointer; padding: 4px 10px; border-radius: 3px; }
+    .header .nav-link:hover { background: #ebecf0; color: #0052cc; }
+    .header .nav-link.active { background: #e6f0ff; color: #0052cc; font-weight: 600; }
+
+    /* ----- filter bar ----- */
+    .filter-bar { display: flex; align-items: center; gap: 14px; padding: 10px 20px; background: #fafbfc; border-bottom: 1px solid #dfe1e6; flex-wrap: wrap; }
+    .filter-bar .fp { display: flex; align-items: center; gap: 5px; }
+    .filter-bar .fp label { font-size: 11px; color: #5e6c84; font-weight: 600; white-space: nowrap; }
+    .filter-bar .fp select { font-size: 13px; padding: 4px 10px; border: 1px solid #dfe1e6; border-radius: 4px; background: #fff; color: #172b4d; cursor: pointer; min-width: 120px; }
+    .filter-bar .fp select:focus { outline: none; border-color: #0052cc; box-shadow: 0 0 0 2px rgba(0,82,204,0.15); }
+    .filter-bar .fp select optgroup[label]:not(:first-child) { border-top: 1px solid #dfe1e6; }
+
+    /* ----- breadcrumb ----- */
+    .breadcrumb { display: flex; align-items: center; gap: 4px; padding: 6px 20px; font-size: 12px; color: #5e6c84; background: #fff; border-bottom: 1px solid #f4f5f7; }
+    .breadcrumb .cr { color: #5e6c84; cursor: pointer; }
+    .breadcrumb .cr:hover { color: #0052cc; }
+    .breadcrumb .cr.current { color: #172b4d; font-weight: 600; cursor: default; }
+    .breadcrumb .sep { color: #b3bac5; font-size: 14px; }
+    .breadcrumb .back-btn { font-size: 11px; padding: 2px 8px; border: 1px solid #dfe1e6; border-radius: 3px; cursor: pointer; color: #5e6c84; background: #fff; margin-right: 4px; }
+    .breadcrumb .back-btn:hover { background: #ebecf0; }
+
+    /* ----- content ----- */
+    .content { flex: 1; overflow-y: auto; padding: 18px 20px; }
+    .content-wrapper { max-width: 1100px; }
+
+    .kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+    .kpi-item { background: #fafbfc; border: 1px solid #ebecf0; border-radius: 8px; padding: 12px 14px; }
+    .kpi-item .val { font-size: 19px; font-weight: 700; }
+    .kpi-item .lbl { font-size: 11px; color: #5e6c84; margin-top: 2px; }
+    .kpi-item .change { font-size: 12px; margin-top: 1px; }
+    .return-pos { color: #36b37e; }
+    .return-neg { color: #bf2600; }
+
+    .chart-row { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .card { border: 1px solid #dfe1e6; border-radius: 8px; padding: 16px; background: #fff; }
+    .card .card-title { font-size: 12px; font-weight: 600; margin-bottom: 10px; color: #5e6c84; text-transform: uppercase; letter-spacing: 0.3px; }
+    .graph-ph { height: 150px; background: linear-gradient(135deg, #e6f0ff 0%, #fafbfc 100%); border: 1px dashed #b3bac5; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #5e6c84; font-size: 13px; }
+
+    .table-wrap { overflow-x: auto; }
+    .table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .table th { text-align: left; padding: 8px 10px; border-bottom: 2px solid #dfe1e6; font-weight: 600; color: #5e6c84; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .table td { padding: 8px 10px; border-bottom: 1px solid #f4f5f7; }
+    .table tbody tr { cursor: pointer; }
+    .table tbody tr:hover td { background: #f0f5ff; }
+    .table .clickable { color: #0052cc; font-weight: 500; }
+    .tag { display: inline-block; font-size: 10px; padding: 1px 7px; border-radius: 3px; font-weight: 500; }
+    .tag-equity { background: #e6f0ff; color: #0052cc; }
+    .tag-debt { background: #eaf5e8; color: #216e4e; }
+    .tag-gold { background: #fff8e0; color: #7a5a00; }
+    .tag-crypto { background: #f4e6ff; color: #5243aa; }
+
+    /* ----- donut ----- */
+    .donut-wrap { display: flex; align-items: center; gap: 16px; }
+    .donut { width: 100px; height: 100px; border-radius: 50%; flex-shrink: 0; position: relative; }
+    .donut-center { position: absolute; inset: 18px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #172b4d; }
+    .donut-legend { list-style: none; font-size: 12px; line-height: 1.7; }
+    .donut-legend li { display: flex; align-items: center; gap: 6px; }
+    .donut-legend .swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+    /* ----- lot table ----- */
+    .lot-status { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+    .lot-status.open { background: #36b37e; }
+    .lot-status.closed { background: #b3bac5; }
+
+    /* ----- goals ----- */
+    .goal-list { display: flex; flex-direction: column; gap: 10px; }
+    .goal-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid #dfe1e6; border-radius: 8px; }
+    .goal-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+    .goal-info { flex: 1; min-width: 0; }
+    .goal-name { font-size: 14px; font-weight: 600; }
+    .goal-meta { font-size: 12px; color: #5e6c84; }
+    .goal-progress { width: 120px; flex-shrink: 0; }
+    .goal-bar { height: 6px; background: #ebecf0; border-radius: 3px; overflow: hidden; }
+    .goal-bar .fill { height: 100%; background: #0052cc; border-radius: 3px; }
+    .goal-pct { font-size: 11px; color: #5e6c84; text-align: right; margin-top: 2px; }
+
+    /* ----- state labels ----- */
+    .state-label { display: inline-block; font-size: 10px; font-weight: 600; color: #5e6c84; background: #ebecf0; padding: 2px 8px; border-radius: 3px; margin-bottom: 8px; }
+    .state-label.active { background: #0052cc; color: #fff; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Wealth Tracker · Phase 1 Navigation</h1>
+  <span class="phase">Filter Bar Model</span>
+  <span class="subtitle" style="margin-left:auto">← filter bar scopes content; click a position row to drill</span>
+  <span class="nav-link active" onclick="showView('portfolio')" id="navPortfolio">Portfolio</span>
+  <span class="nav-link" onclick="showView('goals')" id="navGoals">Goals</span>
+</div>
+
+<div class="filter-bar" id="filterBar">
+  <div class="fp">
+    <label>Member:</label>
+    <select id="fltMember">
+      <option value="all">All Members</option>
+      <option value="karun">Karun</option>
+      <option value="spouse">Spouse</option>
+    </select>
+  </div>
+  <div class="fp">
+    <label>Asset Class:</label>
+    <select id="fltClass">
+      <option value="all">All Classes</option>
+      <option value="equity">Equity</option>
+      <option value="debt">Debt</option>
+      <option value="gold">Gold</option>
+      <option value="crypto">Crypto</option>
+    </select>
+  </div>
+</div>
+
+<div class="breadcrumb" id="breadcrumb"></div>
+
+<div class="content" id="content">
+  <div class="content-wrapper" id="contentWrap"></div>
+</div>
+
+<script>
+// ================================================================
+// DATA
+// ================================================================
+const D = {
+  members: [
+    { id: 'karun', name: 'Karun' },
+    { id: 'spouse', name: 'Spouse' },
+  ],
+  classes: [
+    { id: 'equity', label: 'Equity', tag: 'equity' },
+    { id: 'debt', label: 'Debt', tag: 'debt' },
+    { id: 'gold', label: 'Gold', tag: 'gold' },
+    { id: 'crypto', label: 'Crypto', tag: 'crypto' },
+  ],
+  positions: [
+    { name: 'Parag Parikh Flexi Cap Fund', member: 'karun', cls: 'equity', invested: 850000, current: 1045000, xirr: 18.2 },
+    { name: 'HDFC Balanced Advantage Fund', member: 'karun', cls: 'equity', invested: 620000, current: 710000, xirr: 11.5 },
+    { name: 'ICICI Pru Equity & Debt Fund', member: 'karun', cls: 'equity', invested: 340000, current: 395000, xirr: 13.8 },
+    { name: 'Axis Liquid Fund', member: 'karun', cls: 'debt', invested: 400000, current: 418000, xirr: 7.2 },
+    { name: 'SBI Magnum Gilt Fund', member: 'spouse', cls: 'debt', invested: 300000, current: 322000, xirr: 8.6 },
+    { name: 'Sovereign Gold Bonds', member: 'karun', cls: 'gold', invested: 200000, current: 270000, xirr: 12.1 },
+    { name: 'Physical Gold', member: 'spouse', cls: 'gold', invested: 100000, current: 105000, xirr: 5.0 },
+    { name: 'Bitcoin (CoinSwitch)', member: 'karun', cls: 'crypto', invested: 80000, current: 72000, xirr: -10.0 },
+    { name: 'Ethereum (CoinSwitch)', member: 'spouse', cls: 'crypto', invested: 60000, current: 54000, xirr: -10.0 },
+  ],
+  lots: [
+    { date: '2024-01-15', units: 1250.45, nav: 68.02, cost: 85025, current: 104500, pnl: 19475, status: 'open' },
+    { date: '2024-04-10', units: 800.00, nav: 72.15, cost: 57720, current: 66880, pnl: 9160, status: 'open' },
+    { date: '2024-07-22', units: 600.50, nav: 70.80, cost: 42515, current: 50162, pnl: 7647, status: 'open' },
+    { date: '2023-10-05', units: 500.00, nav: 58.40, cost: 29200, current: 0, pnl: 12800, status: 'closed' },
+  ],
+  goals: [
+    { name: 'Retirement Corpus', target: 50000000, current: 11200000, icon: '🏖️', color: '#e6f0ff' },
+    { name: 'Kids Education', target: 15000000, current: 4500000, icon: '🎓', color: '#eaf5e8' },
+    { name: 'Emergency Fund', target: 600000, current: 400000, icon: '🛡️', color: '#fff8e0' },
+    { name: 'Vacation 2027', target: 500000, current: 180000, icon: '✈️', color: '#f4e6ff' },
+  ],
+};
+
+const COLORS = ['#0052cc','#36b37e','#ffab00','#5243aa','#bf2600','#00b8d9'];
+
+let currentView = 'portfolio';
+let inPositionDetail = false;
+let breadcrumbHistory = [];
+
+// ================================================================
+// HELPERS
+// ================================================================
+function mName(id) { return id === 'all' ? 'All Members' : (D.members.find(m => m.id === id)?.name || id); }
+function cName(id) { return id === 'all' ? 'All Classes' : (D.classes.find(c => c.id === id)?.label || id); }
+
+function fmt(n) {
+  if (n >= 10000000) return '₹ ' + (n / 10000000).toFixed(1) + 'Cr';
+  if (n >= 100000) return '₹ ' + (n / 100000).toFixed(1) + 'L';
+  if (n >= 1000) return '₹ ' + (n / 1000).toFixed(0) + 'K';
+  return '₹ ' + n;
+}
+
+function getScoped(memberId, classId) {
+  let ps = D.positions;
+  if (memberId !== 'all') ps = ps.filter(p => p.member === memberId);
+  if (classId !== 'all') ps = ps.filter(p => p.cls === classId);
+  const invested = ps.reduce((s, p) => s + p.invested, 0);
+  const current = ps.reduce((s, p) => s + p.current, 0);
+  const absReturn = current - invested;
+  const xirr = invested > 0 ? ((current / invested - 1) * 100) : 0;
+
+  let alloc;
+  if (classId !== 'all' && memberId !== 'all') {
+    alloc = [{ label: 'This slice', value: current, pct: 100 }];
+  } else if (classId !== 'all') {
+    alloc = D.members.map(m => {
+      const v = ps.filter(p => p.member === m.id).reduce((s, p) => s + p.current, 0);
+      return { label: m.name, value: v, pct: current > 0 ? Math.round(v / current * 100) : 0 };
+    }).filter(a => a.value > 0);
+  } else {
+    alloc = D.classes.map(c => {
+      const v = ps.filter(p => p.cls === c.id).reduce((s, p) => s + p.current, 0);
+      return { label: c.label, value: v, pct: current > 0 ? Math.round(v / current * 100) : 0 };
+    }).filter(a => a.value > 0);
+  }
+
+  const title = memberId !== 'all' && classId !== 'all'
+    ? `${mName(memberId)}'s ${cName(classId)}`
+    : memberId !== 'all' ? `${mName(memberId)}'s Portfolio`
+    : classId !== 'all' ? `${cName(classId)} Holdings`
+    : 'Household Net Worth';
+
+  return { positions: ps, invested, current, absReturn, xirr, alloc, title, memberId, classId };
+}
+
+// ================================================================
+// RENDERERS
+// ================================================================
+
+function renderKPIs(d) {
+  const formatReturn = (val) => val >= 0 ? '+' + fmt(Math.abs(val)) : '-' + fmt(Math.abs(val));
+  return `<div class="kpi-strip">
+    <div class="kpi-item"><div class="val">${fmt(d.current)}</div><div class="lbl">Current Value</div></div>
+    <div class="kpi-item"><div class="val">${fmt(d.invested)}</div><div class="lbl">Total Invested</div></div>
+    <div class="kpi-item"><div class="val ${d.absReturn >= 0 ? 'return-pos' : 'return-neg'}">${formatReturn(d.absReturn)}</div><div class="lbl">Absolute Return</div></div>
+    <div class="kpi-item"><div class="val ${d.xirr >= 0 ? 'return-pos' : 'return-neg'}">${d.xirr >= 0 ? '+' : ''}${d.xirr.toFixed(1)}%</div><div class="lbl">XIRR</div></div>
+  </div>`;
+}
+
+function renderDonut(alloc) {
+  if (!alloc || alloc.length === 0 || alloc.every(a => a.value === 0))
+    return '<div style="color:#5e6c84;font-size:12px;padding:20px;text-align:center">No data</div>';
+  const total = alloc.reduce((s, a) => s + a.value, 0);
+  if (total === 0) return '<div style="color:#5e6c84;font-size:12px;padding:20px;text-align:center">No data</div>';
+  let angle = 0;
+  const stops = alloc.map((a, i) => {
+    const pct = (a.value / total) * 360;
+    const start = angle;
+    angle += pct;
+    return `${COLORS[i % COLORS.length]} ${start}deg ${angle}deg`;
+  });
+  return `<div class="donut-wrap">
+    <div class="donut" style="background:conic-gradient(${stops.join(', ')})">
+      <div class="donut-center">${alloc[0].pct}%</div>
+    </div>
+    <ul class="donut-legend">${alloc.map((a, i) =>
+      `<li><span class="swatch" style="background:${COLORS[i % COLORS.length]}"></span>${a.label} — ${a.pct}%</li>`
+    ).join('')}</ul>
+  </div>`;
+}
+
+function renderCharts(d) {
+  const benchmarkLabel = d.classId !== 'all'
+    ? (d.classId === 'equity' ? 'vs Nifty 50' : d.classId === 'debt' ? 'vs CRISIL Bond Index' : 'vs Benchmark')
+    : 'with Benchmark overlay';
+  return `<div class="chart-row">
+    <div class="card">
+      <div class="card-title">Growth ${benchmarkLabel}</div>
+      <div class="graph-ph">📈 ${d.title}</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Allocation</div>
+      ${renderDonut(d.alloc)}
+    </div>
+  </div>`;
+}
+
+function renderPosTable(positions) {
+  if (!positions || positions.length === 0)
+    return '<div class="card"><div style="color:#5e6c84;font-size:13px;padding:10px;text-align:center">No positions match the current filters</div></div>';
+  return `<div class="card">
+    <div class="card-title">Positions (${positions.length})</div>
+    <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Scheme</th><th>Class</th><th>Invested</th><th>Current</th><th>XIRR</th></tr></thead>
+      <tbody>${positions.map(p =>
+        `<tr onclick="showPositionDetail('${p.name.replace(/'/g, "\\'")}')">
+          <td class="clickable">${p.name}</td>
+          <td><span class="tag tag-${p.cls}">${p.cls}</span></td>
+          <td>${fmt(p.invested)}</td>
+          <td>${fmt(p.current)}</td>
+          <td class="${p.xirr >= 0 ? 'return-pos' : 'return-neg'}">${p.xirr >= 0 ? '+' : ''}${p.xirr}%</td>
+        </tr>`
+      ).join('')}</tbody>
+    </table>
+    </div>
+  </div>`;
+}
+
+function renderPositionDetail() {
+  const p = D.positions[0];
+  const formatReturn = (val) => val >= 0 ? '+' + fmt(Math.abs(val)) : '-' + fmt(Math.abs(val));
+  return `<div class="kpi-strip">
+    <div class="kpi-item"><div class="val">${fmt(p.current)}</div><div class="lbl">Current Value</div></div>
+    <div class="kpi-item"><div class="val">${fmt(p.invested)}</div><div class="lbl">Total Invested</div></div>
+    <div class="kpi-item"><div class="val return-pos">+${fmt(p.current - p.invested)}</div><div class="lbl">Unrealised Gain</div></div>
+    <div class="kpi-item"><div class="val return-pos">+${p.xirr}%</div><div class="lbl">XIRR</div></div>
+  </div>
+  <div class="chart-row">
+    <div class="card">
+      <div class="card-title">Performance vs Benchmark</div>
+      <div class="graph-ph">📈 Fund NAV vs Nifty 500 TRI</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Quick Stats</div>
+      <div style="font-size:13px;line-height:2">
+        <strong>Folio:</strong> 1000001234<br>
+        <strong>AMC:</strong> PPFAS Mutual Fund<br>
+        <strong>Category:</strong> Flexi Cap<br>
+        <strong>Total Units:</strong> 2,650.95<br>
+        <strong>Avg NAV:</strong> ₹ 70.06<br>
+        <strong>Member:</strong> ${mName(p.member)}<br>
+        <strong>Class:</strong> ${cName(p.cls)}
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Transaction Lots (${D.lots.length})</div>
+    <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Date</th><th>Units</th><th>NAV</th><th>Cost</th><th>Current</th><th>P&amp;L</th><th>Status</th></tr></thead>
+      <tbody>${D.lots.map(l =>
+        `<tr>
+          <td>${l.date}</td>
+          <td>${l.units.toFixed(2)}</td>
+          <td>₹ ${l.nav.toFixed(2)}</td>
+          <td>₹ ${l.cost.toLocaleString()}</td>
+          <td>${l.status === 'open' ? '₹ ' + l.current.toLocaleString() : '—'}</td>
+          <td class="${l.pnl >= 0 ? 'return-pos' : 'return-neg'}">${l.pnl >= 0 ? '+' : ''}₹ ${l.pnl.toLocaleString()}</td>
+          <td><span class="lot-status ${l.status}"></span>${l.status}</td>
+        </tr>`
+      ).join('')}</tbody>
+    </table>
+    </div>
+  </div>`;
+}
+
+function renderGoals() {
+  const pct = (cur, tgt) => Math.min(100, Math.round((cur / tgt) * 100));
+  return `<div class="card">
+    <div class="card-title">All Goals (${D.goals.length})</div>
+    <div class="goal-list">
+      ${D.goals.map(g => {
+        const pp = pct(g.current, g.target);
+        return `<div class="goal-card">
+          <div class="goal-icon" style="background:${g.color}">${g.icon}</div>
+          <div class="goal-info">
+            <div class="goal-name">${g.name}</div>
+            <div class="goal-meta">${fmt(g.current)} / ${fmt(g.target)}</div>
+          </div>
+          <div class="goal-progress">
+            <div class="goal-bar"><div class="fill" style="width:${pp}%"></div></div>
+            <div class="goal-pct">${pp}%</div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">How Goals Attach</div>
+    <div style="font-size:13px;line-height:1.7;color:#42526e">
+      Each goal links to <strong>Investments</strong> (earmarked positions or % of portfolio).<br>
+      The Net Worth graph shows a <strong>target overlay line</strong> when a goal-linked slice is active.<br>
+      Goals can be filtered by <strong>member</strong> for per-person targets.
+    </div>
+  </div>`;
+}
+
+// ================================================================
+// NAVIGATION
+// ================================================================
+
+function renderPortfolio() {
+  const mid = document.getElementById('fltMember').value;
+  const cid = document.getElementById('fltClass').value;
+  const d = getScoped(mid, cid);
+
+  // Breadcrumb
+  const bc = document.getElementById('breadcrumb');
+  const parts = [{ label: 'Portfolio', id: null }];
+  if (mid !== 'all') parts.push({ label: mName(mid), id: null });
+  if (cid !== 'all') parts.push({ label: cName(cid), id: null });
+  bc.innerHTML = parts.map((p, i) =>
+    (i > 0 ? '<span class="sep">›</span>' : '') +
+    `<span class="cr ${i === parts.length - 1 ? 'current' : ''}">${p.label}</span>`
+  ).join('');
+
+  // Content
+  const el = document.getElementById('contentWrap');
+  el.innerHTML = renderKPIs(d) + renderCharts(d) + renderPosTable(d.positions);
+}
+
+function showPositionDetail(posName) {
+  inPositionDetail = true;
+  document.getElementById('filterBar').style.display = 'none';
+
+  // Breadcrumb
+  const mid = document.getElementById('fltMember').value;
+  const cid = document.getElementById('fltClass').value;
+  const bc = document.getElementById('breadcrumb');
+  const parts = [
+    { label: 'Back to Portfolio', click: backFromPosition },
+    { label: 'Portfolio', click: null },
+  ];
+  if (mid !== 'all') parts.push({ label: mName(mid), click: null });
+  if (cid !== 'all') parts.push({ label: cName(cid), click: null });
+  parts.push({ label: posName, click: null });
+  bc.innerHTML = parts.map((p, i) => {
+    if (i === 0) return `<span class="back-btn" onclick="${p.click}">← Back</span>`;
+    return (i > 1 ? '<span class="sep">›</span>' : '') +
+      `<span class="cr ${i === parts.length - 1 ? 'current' : ''}">${p.label}</span>`;
+  }).join('');
+
+  document.getElementById('contentWrap').innerHTML = renderPositionDetail();
+}
+
+function backFromPosition() {
+  inPositionDetail = false;
+  document.getElementById('filterBar').style.display = 'flex';
+  renderPortfolio();
+}
+
+function showView(view) {
+  currentView = view;
+  document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+  document.getElementById(view === 'portfolio' ? 'navPortfolio' : 'navGoals').classList.add('active');
+
+  if (view === 'goals') {
+    inPositionDetail = false;
+    document.getElementById('filterBar').style.display = 'none';
+    document.getElementById('breadcrumb').innerHTML = '<span class="cr current">Goals</span>';
+    document.getElementById('contentWrap').innerHTML = renderGoals();
+  } else {
+    document.getElementById('filterBar').style.display = 'flex';
+    renderPortfolio();
+  }
+}
+
+// ================================================================
+// INIT
+// ================================================================
+
+function init() {
+  const mSel = document.getElementById('fltMember');
+  const cSel = document.getElementById('fltClass');
+
+  mSel.addEventListener('change', () => { if (currentView === 'portfolio') renderPortfolio(); });
+  cSel.addEventListener('change', () => { if (currentView === 'portfolio') renderPortfolio(); });
+
+  renderPortfolio();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
