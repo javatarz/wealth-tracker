@@ -84,9 +84,10 @@ quantity, price, exchange fee). Same FIFO lot-matching for sells.
 
 ## Prototype
 
-The prototype at `prototypes/manual-entry/index.html` explores all eight asset
-classes with two entry modes (opening balance vs detailed) and is preserved on
-the `prototype/manual-entry` throwaway branch.
+A throwaway HTML prototype explored all eight asset classes with two entry
+modes (opening balance vs detailed). Deleted after the decisions were captured
+in this ADR (projects use trunk-based development — prototypes live on main
+and are removed when the card is closed).
 
 ## Consequences
 
