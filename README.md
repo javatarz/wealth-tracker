@@ -52,4 +52,4 @@ Configure via environment variables (see [ADR 0018](docs/adr/0018-repo-layout-ap
 
 ## License
 
-Not yet decided.
+[AGPL-3.0](LICENSE) — see the `LICENSE` file for the full text.
