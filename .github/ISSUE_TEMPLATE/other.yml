@@ -1,0 +1,9 @@
+name: Blank Issue
+about: General issue that doesn't fit the templates above
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For agent-grilling tickets use the `wayfinder:grilling` label.
+        For prototype tickets use the `wayfinder:prototype` label.
+        See the wayfinder map (#1) for ticket conventions.

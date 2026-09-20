@@ -1,0 +1,27 @@
+name: Bug Report
+description: Report a behaviour that does not match the spec or ADRs
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened vs what should have happened
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: How to trigger the bug
+      placeholder: "1. Go to … 2. Click on … 3. See error"
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Logs, screenshots, or relevant ADR/issue references
+  - type: input
+    id: version
+    attributes:
+      label: Commit or version
+      description: The commit hash or tag where this was observed

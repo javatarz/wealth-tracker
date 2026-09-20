@@ -1,5 +1,11 @@
 # Wealth Tracker
 
+[![Status: Phase 1](https://img.shields.io/badge/status-Phase_1-blue)](#)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
+[![Stack: Python/FastAPI](https://img.shields.io/badge/stack-Python%2FFastAPI-3776AB?logo=python&logoColor=white)](docs/adr/0011-stack.md)
+[![Stack: TypeScript/React](https://img.shields.io/badge/stack-TypeScript%2FReact-3178C6?logo=typescript&logoColor=white)](docs/adr/0011-stack.md)
+[![PRs: welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](#)
+
 A privacy-focused, self-hostable tool for tracking an Indian household's wealth over time. Ingests portfolio data (starting with CAMS mutual fund statements), builds a time-series view of holdings, and projects whether Goals will be met.
 
 ## Status
