@@ -1,0 +1,1078 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE p3 — CAMS import: parse progress, commit flow, review hierarchy</title>
+<style>
+  :root{
+    --bg:#f6f6f4; --panel:#fff; --ink:#1a1a18; --muted:#6b6b66; --line:#e2e2dd;
+    --ok:#0f7a4d; --ok-bg:#e8f5ee; --warn:#9a6300; --warn-bg:#fdf3e0;
+    --bad:#b3261e; --bad-bg:#fceceb; --info:#2f5b9e; --info-bg:#eaf1fb;
+    --accent:#1a1a18; --radius:10px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:14px/1.5 ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{margin:0; font-weight:600; letter-spacing:-.01em}
+  h1{font-size:19px} h2{font-size:16px} h3{font-size:14px}
+  h4{font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted)}
+  p{margin:0 0 8px}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px}
+  .muted{color:var(--muted)}
+  .small{font-size:12.5px}
+  .num{font-variant-numeric:tabular-nums}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; background:#f1f1ec; padding:1px 5px; border-radius:4px}
+  button{font:inherit; cursor:pointer}
+  .btn{border:1px solid var(--line); background:var(--panel); color:var(--ink); padding:7px 13px; border-radius:8px}
+  .btn:hover{background:#fafaf8}
+  .btn:disabled{opacity:.45; cursor:not-allowed}
+  .btn-primary{background:var(--accent); color:#fff; border-color:var(--accent)}
+  .btn-primary:hover{background:#000}
+  .btn-sm{padding:3px 9px; font-size:12.5px; border-radius:6px}
+  .btn-ghost{border-color:transparent; background:transparent; color:var(--muted)}
+  .btn-ghost:hover{background:#f0f0ec; color:var(--ink)}
+  .btn-lg{padding:10px 22px; font-size:15px; border-radius:10px}
+  .btn-success{background:var(--ok); color:#fff; border-color:var(--ok)}
+  .btn-success:hover{background:#0b663e}
+  input[type=password],input[type=text]{font:inherit; border:1px solid var(--line); border-radius:8px; padding:8px 11px; background:#fff; min-width:0}
+  input[type=password]:focus{outline:2px solid var(--accent); outline-offset:0; border-color:transparent}
+  .chip{display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:999px; font-size:11.5px; font-weight:600; border:1px solid transparent}
+  .chip-ok{background:var(--ok-bg); color:var(--ok)}
+  .chip-warn{background:var(--warn-bg); color:var(--warn)}
+  .chip-bad{background:var(--bad-bg); color:var(--bad)}
+  .chip-info{background:var(--info-bg); color:var(--info)}
+  .chip-neutral{background:#f0f0ec; color:var(--muted)}
+  .chip-typed{background:#fff; border-color:var(--line); color:var(--muted); font-family:ui-monospace,monospace; font-size:10.5px; font-weight:500; letter-spacing:.02em}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius)}
+  .pad{padding:14px 16px}
+  table{width:100%; border-collapse:collapse}
+  th{text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:600; padding:8px 10px; border-bottom:1px solid var(--line)}
+  td{padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  .right{text-align:right}
+  .banner{display:flex; gap:12px; align-items:flex-start; padding:12px 14px; border-radius:var(--radius); border:1px solid}
+  .banner-ok{background:var(--ok-bg); border-color:#bfe0cd}
+  .banner-warn{background:var(--warn-bg); border-color:#eed9ae}
+  .banner-bad{background:var(--bad-bg); border-color:#f0c3bf}
+  .banner-info{background:var(--info-bg); border-color:#c9dcf5}
+  .dropzone{border:1.5px dashed #c9c9c2; border-radius:12px; background:#fbfbf9; padding:38px 20px; text-align:center}
+  .stack{display:flex; flex-direction:column; gap:12px}
+  .row{display:flex; align-items:center; gap:10px}
+  .row-between{display:flex; align-items:center; justify-content:space-between; gap:10px}
+  .grow{flex:1; min-width:0}
+  .wrap{max-width:1080px; margin:0 auto; padding:22px 20px 130px}
+  #proto{position:fixed; left:0; right:0; bottom:12px; display:flex; justify-content:center; z-index:99; pointer-events:none}
+  #proto > *{pointer-events:auto}
+  .pill{background:#111; color:#fff; border-radius:999px; box-shadow:0 6px 22px rgba(0,0,0,.28); display:flex; align-items:center; gap:2px; padding:5px 7px}
+  .pill button{background:transparent; color:#fff; border:none; padding:4px 9px; border-radius:999px; font-size:13px}
+  .pill button:hover{background:#333}
+  .pill .label{font-size:12.5px; padding:0 8px; min-width:210px; text-align:center}
+  .pill .label b{font-weight:700}
+  .scenarios{position:fixed; bottom:12px; left:16px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:8px 10px; box-shadow:0 4px 14px rgba(0,0,0,.08); z-index:99; font-size:12.5px; max-width:270px}
+  .scenarios select{font:inherit; border:1px solid var(--line); border-radius:6px; padding:4px 6px; width:100%; margin-top:4px; background:#fff}
+  .scenarios .hint{margin-top:6px; color:var(--muted); font-size:11.5px; line-height:1.45}
+  .protobadge{position:fixed; top:12px; right:16px; background:var(--bad); color:#fff; font-size:11px; font-weight:700; letter-spacing:.08em; padding:4px 10px; border-radius:999px; z-index:99; text-transform:uppercase}
+  .steps{display:flex; align-items:center; gap:0; margin-bottom:20px; flex-wrap:wrap}
+  .step{display:flex; align-items:center; gap:8px; color:var(--muted); font-size:13px}
+  .step .dot{width:22px; height:22px; border-radius:50%; border:1.5px solid #cfcfc8; display:grid; place-items:center; font-size:11.5px; font-weight:700; background:var(--panel); flex:none}
+  .step.done .dot{background:var(--ok); border-color:var(--ok); color:#fff}
+  .step.current .dot{background:var(--accent); border-color:var(--accent); color:#fff}
+  .step.current{color:var(--ink); font-weight:600}
+  .stepline{flex:1; height:1.5px; background:#dcdcd6; margin:0 12px; min-width:20px}
+  .gutter{width:6px; align-self:stretch; border-radius:3px; background:#dcdcd6; flex:none}
+  .gutter.warn{background:#e0ab2d} .gutter.bad{background:#d1463c} .gutter.ok{background:#3d9a6c} .gutter.info{background:#4f7fc4}
+  .meter{height:5px; border-radius:3px; background:#e6e6e1; overflow:hidden; min-width:110px}
+  .meter > i{display:block; height:100%; background:var(--accent); transition:width .3s}
+  .choices{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px}
+  .choice{border:1px solid var(--line); background:#fff; border-radius:7px; padding:5px 10px; font-size:12.5px; display:flex; gap:6px; align-items:center}
+  .choice:hover{background:#f7f7f4}
+  .choice.sel{background:var(--accent); color:#fff; border-color:var(--accent)}
+  .tick{list-style:none; padding:0; margin:6px 0 0}
+  .tick li{display:flex; gap:8px; font-size:12.5px; color:var(--muted); padding:2px 0}
+  .tick li::before{content:"\b7"; color:var(--muted)}
+  details.prov{margin-top:12px}
+  details.prov summary{cursor:pointer; font-size:12.5px; color:var(--muted)}
+  details.prov .body{margin-top:6px; font-family:ui-monospace,monospace; font-size:11.5px; line-height:1.8; color:var(--muted)}
+  .accent-line{border-left:4px solid; border-radius:4px}
+  .accent-line.bad{border-left-color:var(--bad)} .accent-line.warn{border-left-color:var(--warn)} .accent-line.info{border-left-color:var(--info)}
+  .bottom-sheet{position:fixed; bottom:0; left:0; right:0; background:var(--panel); border-top:1px solid var(--line); border-radius:16px 16px 0 0; padding:20px 24px 24px; z-index:90; box-shadow:0 -8px 30px rgba(0,0,0,.12); max-width:580px; margin:0 auto}
+  .bottom-sheet .bar{width:36px; height:4px; border-radius:2px; background:#dcdcd6; margin:0 auto 14px}
+  .popover{position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px; box-shadow:0 10px 40px rgba(0,0,0,.18); z-index:91; max-width:420px; width:calc(100% - 40px)}
+  .overlay{position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.18); z-index:90}
+  .sticky{position:sticky; bottom:0; z-index:10}
+  .card.bad{border-color:var(--bad)} .card.warn{border-color:var(--warn)} .card.ok{border-color:var(--ok)} .card.info{border-color:var(--info)}
+  @keyframes pop{0%{opacity:0;transform:scale(.94)}100%{opacity:1;transform:scale(1)}}
+  @keyframes slideUp{0%{opacity:0;transform:translateY(40px)}100%{opacity:1;transform:translateY(0)}}
+  @keyframes fadeIn{0%{opacity:0}100%{opacity:1}}
+  @keyframes slideDown{0%{opacity:0;transform:translateY(-10px)}100%{opacity:1;transform:translateY(0)}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+  @keyframes checkPop{0%{transform:scale(0)}50%{transform:scale(1.3)}100%{transform:scale(1)}}
+  .anim-pop{animation:pop .2s ease-out}
+  .anim-slide{animation:slideUp .25s ease-out}
+  .anim-fade{animation:fadeIn .3s ease-out}
+  .anim-slideDown{animation:slideDown .25s ease-out}
+  .pulse{animation:pulse 1.2s ease-in-out infinite}
+  .check-anim{animation:checkPop .35s ease-out}
+  .lockicon{width:44px; height:44px; border-radius:10px; background:#f0f0ec; display:grid; place-items:center; font-size:20px; flex:none}
+  .lockbox{display:flex; gap:20px; align-items:flex-start; padding:18px}
+  .fielderr{color:var(--bad); font-size:12.5px; margin-top:7px}
+  .rtag{font-size:10px; font-weight:700; letter-spacing:.06em; color:var(--muted); text-transform:uppercase; margin:10px 0 4px}
+  .sticky-footer{position:sticky; bottom:0; background:rgba(255,255,255,.94); backdrop-filter:blur(8px); border-top:1px solid var(--line); padding:12px 16px; display:flex; align-items:center; justify-content:space-between; border-radius:0 0 var(--radius) var(--radius); margin-top:12px}
+  .resolve-line{padding:12px 14px; border:1px solid var(--line); border-radius:8px; margin-bottom:8px; background:var(--panel)}
+  .resolve-line.done{background:#fbfdfb; border-color:#cfe6da}
+  .summary-table td{padding:6px 10px; font-size:12.5px}
+  .summary-table td:first-child{font-weight:600}
+  .summary-table td:last-child{color:var(--muted)}
+  .file-row{display:flex; gap:8px; align-items:center; padding:6px 0}
+  .acc-item{border:1px solid var(--line); border-radius:var(--radius); overflow:hidden}
+  .acc-header{display:flex; align-items:center; gap:10px; padding:10px 14px; cursor:pointer; user-select:none}
+  .acc-header:hover{background:#fafaf8}
+  .acc-body{padding:12px 14px; border-top:1px solid var(--line)}
+
+  /* Variant A specific */
+  .parse-card-full{background:var(--panel);border:1.5px solid var(--line);border-radius:12px;overflow:hidden}
+  .parse-card-full.fail{border-color:var(--bad)}
+  .parse-card-full.done{border-color:#bfe0cd}
+  .parse-card-full .red-gutter{width:6px;background:var(--bad);flex:none}
+  .parse-card-full .pbar-lg{height:10px;border-radius:5px;background:#e6e6e1;overflow:hidden}
+  .parse-card-full .pbar-lg i{display:block;height:100%;background:var(--accent);transition:width .5s;border-radius:5px}
+  .parse-card-full .pbar-lg i.fail{background:var(--bad)}
+  .status-icon-lg{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:20px;flex:none}
+  .status-icon-lg.spin{background:#f0f0ec}
+  .status-icon-lg.done{background:var(--ok-bg);color:var(--ok)}
+  .status-icon-lg.fail{background:var(--bad-bg);color:var(--bad)}
+  .review-tier-red{border:1.5px solid var(--bad);border-radius:12px;overflow:hidden}
+  .review-tier-red .tier-head{background:var(--bad-bg);padding:14px 16px;border-bottom:1.5px solid var(--bad)}
+  .review-tier-amber{border:1.5px solid var(--warn);border-radius:12px;overflow:hidden}
+  .review-tier-amber .tier-head{background:var(--warn-bg);padding:14px 16px;border-bottom:1.5px solid var(--warn)}
+  .review-tier-gray{border:1.5px solid var(--line);border-radius:12px;overflow:hidden}
+  .review-tier-gray .tier-head{background:#fbfbf9;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .review-item-card{border-left:4px solid;border-radius:8px;padding:14px;background:var(--panel);margin-bottom:10px}
+  .review-item-card.bad{border-left-color:var(--bad)}
+  .review-item-card.warn{border-left-color:var(--warn)}
+  .review-item-card.info{border-left-color:var(--info)}
+  .commit-full-card{border:1.5px solid var(--line);border-radius:14px;overflow:hidden;background:var(--panel)}
+  .commit-full-card .commit-head{padding:22px 24px 16px;text-align:center}
+  .commit-full-card .commit-body{padding:0 24px 20px}
+  .commit-full-card .commit-foot{padding:16px 24px 20px;background:#fbfbf9;border-top:1px solid var(--line);display:flex;gap:12px;justify-content:flex-end}
+  .success-banner-lg{background:var(--ok-bg);border:1.5px solid #bfe0cd;border-radius:14px;padding:22px 24px;text-align:center}
+  .success-banner-lg .check-circle{width:52px;height:52px;border-radius:50%;background:var(--ok);color:#fff;display:grid;place-items:center;font-size:28px;margin:0 auto 10px}
+  .page-counter{font-size:12px;color:var(--muted);font-family:ui-monospace,monospace}
+  .error-panel{background:var(--bad-bg);border:1px solid var(--bad);border-radius:8px;padding:10px 14px;margin-top:8px}
+  .error-panel .fix-line{color:var(--bad);font-weight:600;font-size:13px}
+  .error-panel .fix-sugg{color:var(--ink);font-size:12.5px;margin-top:4px}
+
+  /* Variant B specific */
+  .dash-grid{display:grid;grid-template-columns:1fr;gap:16px}
+  @media(min-width:860px){.dash-grid{grid-template-columns:1fr 1fr}}
+  .dash-full{grid-column:1/-1}
+  .file-strip-row{display:flex;gap:10px;overflow-x:auto;padding:4px 0}
+  .file-card-mini{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:190px;max-width:220px;flex:none}
+  .file-card-mini.fail{border-color:var(--bad);background:var(--bad-bg)}
+  .file-card-mini.done{border-color:#bfe0cd}
+  .file-card-mini .icon-box{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;font-size:12px;flex:none}
+  .file-card-mini .icon-box.parse{background:var(--info-bg);color:var(--info)}
+  .file-card-mini .icon-box.done{background:var(--ok-bg);color:var(--ok)}
+  .file-card-mini .icon-box.fail{background:var(--bad-bg);color:var(--bad)}
+  .decision-pill{background:var(--panel);padding:4px 8px;border-radius:6px;border:1px solid var(--line);font-size:11.5px;color:var(--muted);cursor:pointer}
+  .decision-pill:hover{background:#f7f7f4}
+  .decision-pill.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .commit-bar{position:sticky;bottom:0;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;margin-top:20px;z-index:10;border-radius:0}
+  .commit-bar.success{background:var(--ok-bg);border-color:#bfe0cd}
+  .rejection-badge{font-size:10.5px;color:var(--bad);margin-top:2px;line-height:1.35}
+  .severity-badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:2px 6px;border-radius:4px}
+  .severity-badge.critical{background:var(--bad-bg);color:var(--bad)}
+  .severity-badge.warning{background:var(--warn-bg);color:var(--warn)}
+
+  /* Variant C specific */
+  .wiz-layout{display:flex;min-height:calc(100vh - 40px)}
+  .wiz-sidebar{width:250px;flex:none;background:var(--panel);border-right:1px solid var(--line);padding:20px 0;position:sticky;top:0;height:100vh;overflow-y:auto}
+  .wiz-sidebar .step-item{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;color:var(--muted);border-left:3px solid transparent}
+  .wiz-sidebar .step-item.active{color:var(--ink);font-weight:600;background:#f8f8f6;border-left-color:var(--accent)}
+  .wiz-sidebar .step-item.done{color:var(--ok)}
+  .wiz-sidebar .step-icon{width:22px;height:22px;border-radius:50%;border:1.5px solid #cfcfc8;display:grid;place-items:center;font-size:11px;font-weight:700;flex:none;background:var(--panel)}
+  .wiz-sidebar .step-item.done .step-icon{background:var(--ok);border-color:var(--ok);color:#fff}
+  .wiz-sidebar .step-item.active .step-icon{background:var(--accent);border-color:var(--accent);color:#fff}
+  .wiz-content{flex:1;padding:22px 28px 140px;max-width:820px}
+  .feed-panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .feed-item{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-bottom:1px solid var(--line);animation:fadeIn .3s ease-out}
+  .feed-item:last-child{border-bottom:none}
+  .feed-item.fail{background:var(--bad-bg)}
+  .feed-icon{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:13px;flex:none}
+  .feed-icon.done{background:var(--ok-bg);color:var(--ok)}
+  .feed-icon.fail{background:var(--bad-bg);color:var(--bad)}
+  .feed-icon.pending{background:#f0f0ec;color:var(--muted)}
+  .decision-card-lg{border:1.5px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel);margin-bottom:14px;position:relative;transition:all .3s}
+  .decision-card-lg.done{background:#fbfdfb;border-color:#cfe6da}
+  .decision-card-lg .dc-head{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+  .decision-card-lg.done .dc-head{border-bottom-color:#cfe6da}
+  .decision-card-lg .dc-body{padding:14px 16px}
+  .decision-card-lg .dc-overlay{position:absolute;inset:0;background:rgba(255,255,255,.7);display:grid;place-items:center;font-size:40px;color:var(--ok);z-index:2;border-radius:12px}
+  .drawer-backdrop{position:fixed;top:0;left:330px;right:0;bottom:0;background:rgba(0,0,0,.24);z-index:88;animation:fadeIn .2s ease-out}
+  @media(max-width:750px){.drawer-backdrop{left:0}}
+  .import-drawer{position:fixed;bottom:0;left:330px;right:0;background:var(--panel);border-radius:16px 16px 0 0;padding:20px 24px 24px;z-index:89;box-shadow:0 -8px 30px rgba(0,0,0,.14);animation:slideUp .25s ease-out}
+  @media(max-width:750px){.import-drawer{left:0}}
+  .overall-progress{height:8px;border-radius:4px;background:#e6e6e1;overflow:hidden;margin-bottom:14px}
+  .overall-progress i{display:block;height:100%;background:var(--accent);transition:width .5s;border-radius:4px}
+</style>
+</head>
+<body>
+<div class="protobadge">Prototype p3</div>
+<div id="app"></div>
+<div class="scenarios">
+  <label class="small" style="font-weight:600" for="scen">Scenario</label>
+  <select id="scen"></select>
+  <div class="hint" id="scenhint"></div>
+</div>
+
+<script>
+/* ================================================================== *
+ * Helpers
+ * ================================================================== */
+const inr = n => "\u20b9" + new Intl.NumberFormat("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2}).format(n);
+const u3  = n => new Intl.NumberFormat("en-IN",{minimumFractionDigits:3,maximumFractionDigits:3}).format(n);
+const dmy = iso => { const [y,m,d] = iso.split("-"); return d+" "+["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m]+" "+y; };
+const LEDGER = ["PURCHASE","PURCHASE_SIP","REDEMPTION","SWITCH_IN","SWITCH_IN_MERGER",
+                "SWITCH_OUT","SWITCH_OUT_MERGER","GIFT_IN","GIFT_OUT","REVERSAL","SEGREGATION"];
+const INCOME = ["DIVIDEND_PAYOUT","DIVIDEND_REINVEST"];
+const CHARGE = ["STT_TAX","STAMP_DUTY_TAX","TDS_TAX"];
+const classify = t => LEDGER.includes(t) ? "ledger"
+                     : INCOME.includes(t) ? "income"
+                     : CHARGE.includes(t) ? "charge"
+                     : t === "MISC" ? "info"
+                     : "unknown";
+const MEANING = {
+  ledger:"changes units or cost", income:"value without changing units",
+  charge:"a charge against the Position", info:"a note, not a movement",
+  unknown:"we don't know what this does",
+};
+
+/* ================================================================== *
+ * Holdings
+ * ================================================================== */
+const HOLDINGS = {
+  ppfcf:{ name:"Parag Parikh Flexi Cap Fund \u2013 Direct Growth", rta:"CAMS",     rtaCode:"PPFCF", amfi:"122639", isin:"INF879O01027", folio:"12345/67", nav:78.42 },
+  hdfc:{ name:"HDFC Balanced Advantage Fund \u2013 Direct Growth", rta:"CAMS",     rtaCode:"HDFCBAF", amfi:"118989", isin:"INF179K01YV8", folio:"12345/67", nav:512.30 },
+  icici:{name:"ICICI Prudential Corporate Bond Fund \u2013 Direct Growth", rta:"KFINTECH", rtaCode:"ICICICB", amfi:"120648", isin:null, folio:"98765/43", nav:28.914 },
+  quant:{name:"Quant Small Cap Fund \u2013 Direct Growth",         rta:"KFINTECH", rtaCode:"QUANTSC", amfi:"120828", isin:"INF966L01689", folio:"98765/43", nav:264.18 },
+};
+function scheme(key, o){
+  const h = HOLDINGS[key];
+  const close = o.close, derived = o.derived ?? o.close;
+  return { key, ...h, open:o.open, close, derived,
+    closeCalculated:o.closeCalculated ?? close,
+    valuationCost:o.valuationCost ?? null,
+    lots:o.lots ?? 1, txns:o.txns ?? [],
+    note:o.note ?? "",
+    status: Math.abs(derived-close) < 0.0015 ? "match" : "mismatch",
+    delta: +(derived-close).toFixed(3) };
+}
+const txn = (date,type,description,amount,units,nav,balance) =>
+  ({date,type,description,amount,units,nav,balance,kind:classify(type)});
+
+/* ================================================================== *
+ * Scenarios
+ * ================================================================== */
+const SCENARIOS = {
+  "first-import":{
+    label:"First import (documented)",
+    hint:"G4 password step, G5 balance warning, G9 UNKNOWN + informational MISC rows, G6 a Scheme with no ISIN, G7 derived cost basis, G10 two registrars in one file.",
+    files:[{name:"CAS_2026-09-15.pdf", size:"412 KB", pages:18, status:"parsed",
+            fileType:"CAMS", parserVersion:"1.4.1", hash:"a3f19c2e\u2026",
+            kind:"Consolidated Account (Detailed)"}],
+    locked:false,
+    statementTotals:{schemes:4, folios:2},
+    schemes:[
+      scheme("ppfcf",{ open:1000.000, close:1234.567, derived:1234.567, valuationCost:87410.00, lots:3, txns:[
+        txn("2026-04-20","PURCHASE_SIP","SIP instalment",5000.00,66.140,75.60,1066.140),
+        txn("2026-05-20","PURCHASE_SIP","SIP instalment",5000.00,64.881,77.06,1131.021),
+        txn("2026-06-15","DIVIDEND_PAYOUT","IDCW payout",412.00,null,null,null),
+        txn("2026-07-01","MISC","***Registration of Nominee***",null,null,null,null),
+        txn("2026-08-20","PURCHASE","Lumpsum",8000.00,103.546,77.26,1234.567),
+      ]}),
+      scheme("hdfc",{ open:840.000, close:890.123, derived:892.123, valuationCost:288410.55, lots:4, txns:[
+        txn("2026-04-12","SWITCH_IN","Switch in from 98765/43",25200.00,52.123,483.47,892.123),
+        txn("2026-05-05","STAMP_DUTY_TAX","Stamp duty",0.50,null,null,891.999),
+      ]}),
+      scheme("icici",{ open:3420.000, close:3420.000, derived:3420.000, valuationCost:97885.88, lots:1, txns:[
+        txn("2026-04-02","PURCHASE","Lumpsum",97885.88,3420.000,28.622,3420.000),
+      ]}),
+      scheme("quant",{ open:215.000, close:215.000, derived:215.000, valuationCost:0, lots:1, txns:[
+        txn("2026-06-01","MISC","***KYC address update***",null,null,null,null),
+      ]}),
+    ],
+    warnings:[
+      {kind:"balance", scheme:"hdfc", text:"Transactions for this Scheme do not reconcile with the running unit balance printed in the statement. 2.000 units unaccounted for after the 2026-04-12 switch-in."}
+    ],
+    discarded:[],
+    unknown:[
+      {scheme:"ppfcf", date:"2026-09-02", description:"TRF FROM 98765/43", amount:2500.00, units:33.370, nav:74.92, page:9},
+    ],
+    informational:[
+      {scheme:"ppfcf", date:"2026-07-01", description:"***Registration of Nominee***", page:7},
+      {scheme:"quant", date:"2026-06-01", description:"***KYC address update***", page:14},
+    ],
+    duplicates:{skipped:0, sample:[]},
+    openingBalances:[
+      {scheme:"ppfcf", units:1000.000, date:"2026-04-01", note:"statement starts mid-life"},
+      {scheme:"hdfc", units:840.000, date:"2026-04-01", note:"statement starts mid-life"},
+      {scheme:"icici", units:3420.000, date:"2026-04-02", note:"statement starts mid-life"},
+      {scheme:"quant", units:215.000, date:"2026-03-18", note:"statement starts mid-life"},
+    ],
+    rejected:[], counts:{parsedSchemes:4, parsedFolios:2}, inference:false,
+  },
+  "password":{
+    label:"Password-protected, wrong first",
+    hint:"G4. CAS PDFs arrive password-protected. First attempt returns IncorrectPasswordError; the second succeeds without asking the user to upload again.",
+    files:[{name:"CAS_2026-09-15.pdf", size:"412 KB", pages:18, status:"locked",
+            fileType:"CAMS", parserVersion:"1.4.1", hash:"a3f19c2e\u2026",
+            kind:"Consolidated Account (Detailed)"}],
+    locked:true, statementTotals:{schemes:3, folios:2},
+    schemes:[
+      scheme("ppfcf",{ open:1000.000, close:1234.567, derived:1234.567, valuationCost:87410.00, lots:3, txns:[
+        txn("2026-04-20","PURCHASE_SIP","SIP instalment",5000.00,66.140,75.60,1066.140),
+      ]}),
+      scheme("hdfc",{ open:840.000, close:890.123, derived:890.123, valuationCost:288410.55, lots:4, txns:[
+        txn("2026-04-12","SWITCH_IN","Switch in from 98765/43",25200.00,50.123,483.47,890.123),
+      ]}),
+      scheme("icici",{ open:3420.000, close:3420.000, derived:3420.000, valuationCost:97885.88, lots:1, txns:[] }),
+    ],
+    warnings:[], discarded:[], unknown:[], informational:[],
+    duplicates:{skipped:0, sample:[]},
+    openingBalances:[
+      {scheme:"ppfcf", units:1000.000, date:"2026-04-01", note:"statement starts mid-life"},
+      {scheme:"hdfc", units:840.000, date:"2026-04-01", note:"statement starts mid-life"},
+      {scheme:"icici", units:3420.000, date:"2026-04-02", note:"statement starts mid-life"},
+    ],
+    rejected:[], counts:{parsedSchemes:3, parsedFolios:2}, inference:false,
+  },
+  "reimport":{
+    label:"Reimport (documented)",
+    hint:"ADR 0006 \u2014 overlapping statement reimported. Already-in-ledger transactions skipped rather than doubled.",
+    files:[{name:"CAS_2026-12-15.pdf", size:"428 KB", pages:19, status:"parsed",
+            fileType:"CAMS", parserVersion:"1.4.1", hash:"7b02dd41\u2026", kind:"Consolidated Account (Detailed)"}],
+    locked:false, statementTotals:{schemes:4, folios:2},
+    schemes:[
+      scheme("ppfcf",{ open:1234.567, close:1350.401, derived:1350.401, valuationCost:87410.00, lots:3, txns:[
+        txn("2026-10-20","PURCHASE_SIP","SIP instalment",5000.00,62.114,80.50,1296.681),
+        txn("2026-11-20","PURCHASE_SIP","SIP instalment",5000.00,53.720,93.07,1350.401),
+      ]}),
+      scheme("hdfc",{ open:890.123, close:892.123, derived:894.123, valuationCost:288410.55, lots:5, txns:[
+        txn("2026-10-08","PURCHASE","Lumpsum",10000.00,18.940,528.00,909.063),
+      ]}),
+      scheme("icici",{ open:3420.000, close:3420.000, derived:3420.000, valuationCost:97885.88, lots:1, txns:[] }),
+      scheme("quant",{ open:215.000, close:215.000, derived:215.000, valuationCost:0, lots:1, txns:[] }),
+    ],
+    warnings:[
+      {kind:"balance", scheme:"hdfc", text:"Same imbalance as the earlier import \u2014 2.000 units still unaccounted for after the 2026-04-12 switch-in."}
+    ],
+    discarded:[], unknown:[], informational:[],
+    duplicates:{skipped:14, sample:[
+      {date:"2026-09-20", scheme:"Parag Parikh Flexi Cap", type:"PURCHASE_SIP", amount:5000.00},
+    ]},
+    openingBalances:[], rejected:[], counts:{parsedSchemes:4, parsedFolios:2}, inference:false,
+  },
+  "rejected":{
+    label:"Three kinds of rejected file",
+    hint:"G1 re-saved PDF, G2 MFCentral, G3 single-AMC \u2014 three genuinely different errors, not one generic failure.",
+    files:[
+      {name:"CAMS_print_to_pdf.pdf", size:"96 KB", pages:4, status:"rejected", kind:"Re-saved copy",
+       fileType:"UNKNOWN", parserVersion:"1.4.1",
+       reason:"This looks like a re-saved copy of your statement.",
+       fix:"Download the statement fresh from CAMS or KFintech and upload that file."},
+      {name:"MFCentral_CAS_2026-09-15.pdf", size:"298 KB", pages:12, status:"rejected", kind:"MFCentral statement",
+       fileType:"UNKNOWN", parserVersion:"1.4.1",
+       reason:"MFCentral statements aren't supported yet.",
+       fix:"Request the Consolidated Account Statement from CAMS or KFintech instead."},
+      {name:"Single_AMC_HDFC.pdf", size:"180 KB", pages:6, status:"rejected", kind:"Single-AMC statement",
+       fileType:"UNKNOWN", parserVersion:"1.4.1",
+       reason:"This looks like a single-AMC account statement rather than a Consolidated Account Statement."},
+    ],
+    locked:false, statementTotals:{schemes:0, folios:0},
+    schemes:[], warnings:[], discarded:[], unknown:[], informational:[],
+    duplicates:{skipped:0, sample:[]}, openingBalances:[], rejected:[], counts:{parsedSchemes:0, parsedFolios:0}, inference:true,
+  },
+  "vanished":{
+    label:"A Scheme went missing",
+    hint:"The documented v1.1.0 warning: a scheme-header region is discarded without its Opening Unit Balance anchor.",
+    files:[{name:"CAS_2026-09-15.pdf", size:"418 KB", pages:22, status:"parsed-with-warnings",
+            fileType:"CAMS", parserVersion:"1.4.1", hash:"c19de044\u2026", kind:"Consolidated Account (Detailed)"}],
+    locked:false, statementTotals:{schemes:4, folios:2},
+    schemes:[
+      scheme("ppfcf",{ open:1000.000, close:1234.567, derived:1234.567, valuationCost:87410.00, lots:3, txns:[] }),
+      scheme("hdfc",{ open:840.000, close:890.123, derived:890.123, valuationCost:288410.55, lots:4, txns:[] }),
+      scheme("icici",{ open:3420.000, close:3420.000, derived:3420.000, valuationCost:97885.88, lots:1, txns:[] }),
+    ],
+    warnings:[
+      {kind:"discarded", scheme:null, text:"A Scheme header was found near the bottom of page 17 but its Opening Unit Balance was missing."},
+    ],
+    discarded:[{page:17, note:"Scheme header present, Opening Unit Balance absent"}],
+    unknown:[], informational:[], duplicates:{skipped:0, sample:[]},
+    openingBalances:[
+      {scheme:"ppfcf", units:1000.000, date:"2026-04-01", note:"statement starts mid-life"},
+      {scheme:"hdfc", units:840.000, date:"2026-04-01", note:"statement starts mid-life"},
+      {scheme:"icici", units:3420.000, date:"2026-04-02", note:"statement starts mid-life"},
+    ],
+    rejected:[], counts:{parsedSchemes:3, parsedFolios:2}, inference:true,
+  },
+  "messy":{
+    label:"Messy multi-file import",
+    hint:"Everything at once: two registrars, UNKNOWN rows, informational rows, discarded Scheme, balance warning, duplicates, one rejected file.",
+    files:[
+      {name:"CAS_2026-09-15.pdf", size:"418 KB", pages:22, status:"parsed-with-warnings",
+       fileType:"CAMS", parserVersion:"1.4.1", hash:"c19de044\u2026", kind:"Consolidated Account (Detailed)"},
+      {name:"CAS_2026-06-15.pdf", size:"404 KB", pages:17, status:"parsed",
+       fileType:"CAMS", parserVersion:"1.4.1", hash:"5c81ba07\u2026", kind:"Consolidated Account (Detailed)"},
+      {name:"MFCentral_CAS.pdf", size:"298 KB", pages:12, status:"rejected", kind:"MFCentral statement",
+       fileType:"UNKNOWN", parserVersion:"1.4.1",
+       reason:"MFCentral statements aren't supported yet.",
+       fix:"Request the CAS from CAMS or KFintech instead."},
+    ],
+    locked:false, statementTotals:{schemes:5, folios:2},
+    schemes:[
+      scheme("ppfcf",{ open:1000.000, close:1234.567, derived:1234.567, valuationCost:87410.00, lots:3, txns:[
+        txn("2026-04-20","PURCHASE_SIP","SIP instalment",5000.00,66.140,75.60,1066.140),
+      ]}),
+      scheme("hdfc",{ open:840.000, close:890.123, derived:893.010, valuationCost:288410.55, lots:4, txns:[
+        txn("2026-04-12","SWITCH_IN","Switch in from 98765/43",25200.00,53.010,475.38,893.010),
+      ]}),
+      scheme("icici",{ open:3420.000, close:3420.000, derived:3418.000, valuationCost:97885.88, lots:1, txns:[
+        txn("2026-08-14","UNKNOWN","TRANSFER INWARD \u2014 REF 8891",5720.00,198.000,28.889,3418.000),
+      ]}),
+      scheme("quant",{ open:215.000, close:215.000, derived:215.000, valuationCost:0, lots:1, txns:[
+        txn("2026-06-01","MISC","***KYC address update***",null,null,null,null),
+      ]}),
+    ],
+    warnings:[
+      {kind:"discarded", scheme:null, text:"A Scheme header on page 17 had no Opening Unit Balance and could not be read."},
+      {kind:"balance", scheme:"hdfc", text:"Transactions do not reconcile with the printed running unit balance. 2.887 units unaccounted for."},
+    ],
+    discarded:[{page:17, note:"Scheme header present, Opening Unit Balance absent"}],
+    unknown:[
+      {scheme:"icici", date:"2026-08-14", description:"TRANSFER INWARD \u2014 REF 8891", amount:5720.00, units:198.000, nav:28.889, page:11},
+      {scheme:"icici", date:"2026-09-02", description:"TRF FROM 98765/43", amount:2500.00, units:33.370, nav:74.92, page:12},
+    ],
+    informational:[
+      {scheme:"quant", date:"2026-06-01", description:"***KYC address update***", page:14},
+      {scheme:"ppfcf", date:"2026-07-01", description:"***Registration of Nominee***", page:7},
+      {scheme:"ppfcf", date:"2026-09-10", description:"Transmission In", page:8},
+    ],
+    duplicates:{skipped:6, sample:[
+      {date:"2026-06-20", scheme:"Parag Parikh Flexi Cap", type:"PURCHASE_SIP", amount:5000.00},
+    ]},
+    openingBalances:[
+      {scheme:"ppfcf", units:1000.000, date:"2026-06-15", note:"statement starts mid-life"},
+    ],
+    rejected:[], counts:{parsedSchemes:4, parsedFolios:2}, inference:true,
+  },
+  "partial-parse-failure":{
+    label:"Partial parse failure",
+    hint:"Three files dropped, one fails mid-parse while the other two succeed. Tests per-file progress visibility when things go wrong.",
+    files:[
+      {name:"CAS_2026-09-15.pdf", size:"412 KB", pages:18, status:"parsed",
+       fileType:"CAMS", parserVersion:"1.4.1", hash:"a3f19c2e\u2026",
+       kind:"Consolidated Account (Detailed)"},
+      {name:"CAS_2026-06-15.pdf", size:"404 KB", pages:17, status:"parsed",
+       fileType:"CAMS", parserVersion:"1.4.1", hash:"5c81ba07\u2026",
+       kind:"Consolidated Account (Detailed)"},
+      {name:"CAS_2026-03-messy.pdf", size:"396 KB", pages:16, status:"parsed",
+       fileType:"CAMS", parserVersion:"1.4.1", hash:"f2a8e33\u2026",
+       kind:"Consolidated Account (Detailed)", parseFails:true,
+       failReason:"The parser reached page 12 of this file and hit an unrecoverable section. The file may be corrupted or was printed-to-PDF rather than downloaded directly."},
+    ],
+    locked:false, statementTotals:{schemes:5, folios:3},
+    schemes:[
+      scheme("ppfcf",{ open:1000.000, close:1234.567, derived:1234.567, valuationCost:87410.00, lots:3, txns:[
+        txn("2026-04-20","PURCHASE_SIP","SIP instalment",5000.00,66.140,75.60,1066.140),
+        txn("2026-08-20","PURCHASE","Lumpsum",8000.00,103.546,77.26,1234.567),
+      ]}),
+      scheme("hdfc",{ open:840.000, close:890.123, derived:892.123, valuationCost:288410.55, lots:4, txns:[
+        txn("2026-04-12","SWITCH_IN","Switch in from 98765/43",25200.00,52.123,483.47,892.123),
+      ]}),
+      scheme("icici",{ open:3420.000, close:3420.000, derived:3418.000, valuationCost:97885.88, lots:1, txns:[
+        txn("2026-08-14","UNKNOWN","TRANSFER INWARD \u2014 REF 8891",5720.00,198.000,28.889,3418.000),
+      ]}),
+      scheme("quant",{ open:215.000, close:215.000, derived:215.000, valuationCost:0, lots:1, txns:[
+        txn("2026-06-01","MISC","***KYC address update***",null,null,null,null),
+      ]}),
+    ],
+    warnings:[
+      {kind:"balance", scheme:"hdfc", text:"Transactions do not reconcile with the printed running unit balance. 2.000 units unaccounted for after the 2026-04-12 switch-in."},
+    ],
+    discarded:[{page:16, note:"Scheme header present, Opening Unit Balance absent in the corrupted file"}],
+    unknown:[
+      {scheme:"icici", date:"2026-08-14", description:"TRANSFER INWARD \u2014 REF 8891", amount:5720.00, units:198.000, nav:28.889, page:11},
+    ],
+    informational:[
+      {scheme:"quant", date:"2026-06-01", description:"***KYC address update***", page:14},
+      {scheme:"ppfcf", date:"2026-07-01", description:"***Registration of Nominee***", page:7},
+    ],
+    duplicates:{skipped:4, sample:[
+      {date:"2026-06-20", scheme:"Parag Parikh Flexi Cap", type:"PURCHASE_SIP", amount:5000.00},
+    ]},
+    openingBalances:[
+      {scheme:"ppfcf", units:1000.000, date:"2026-04-01", note:"statement starts mid-life"},
+      {scheme:"hdfc", units:840.000, date:"2026-04-01", note:"statement starts mid-life"},
+      {scheme:"icici", units:3420.000, date:"2026-04-02", note:"statement starts mid-life"},
+      {scheme:"quant", units:215.000, date:"2026-03-18", note:"statement starts mid-life"},
+    ],
+    rejected:[], counts:{parsedSchemes:4, parsedFolios:2}, inference:false,
+  },
+};
+
+/* ================================================================== *
+ * Model + shared prototype state
+ * ================================================================== */
+function model(sc){
+  const s = SCENARIOS[sc];
+  const schemes = s.schemes;
+  const mismatched = schemes.filter(x=>x.status==="mismatch");
+  const parseable = s.files.filter(f=>f.status.startsWith("parsed") && !f.parseFails);
+  const parseFailed = s.files.filter(f=>f.parseFails);
+  const rejected = s.files.filter(f=>f.status==="rejected");
+  const locked = s.files.filter(f=>f.status==="locked");
+  const rtaCount = new Set(schemes.map(x=>x.rta)).size;
+  const noIsin = schemes.filter(x=>!x.isin);
+  const unverified = schemes.filter(x=> s.warnings.some(w=>w.kind==="balance" && w.scheme===x.key));
+  const discarded = s.warnings.filter(w=>w.kind==="discarded")
+    .map((w,i)=>({...w, ...((s.discarded||[])[i]||{})}));
+  const countGap = Math.max(0, s.statementTotals.schemes - s.counts.parsedSchemes);
+  const txnCount = schemes.reduce((a,x)=>a+x.txns.filter(t=>t.kind!=="info").length,0);
+  const costKnown = schemes.filter(x=>x.valuationCost!==null).length;
+  const totalOpen = s.openingBalances.reduce((a,o)=>a+o.units,0);
+  return { ...s, sc, schemes, mismatched, parseable, parseFailed, rejected, locked, rtaCount, noIsin, unverified,
+    discarded, countGap, txnCount, costKnown, totalOpen,
+    openCount: mismatched.length + s.unknown.length + discarded.length + rejected.length + countGap,
+  };
+}
+
+const DECISIONS = {};
+const dk = (sc,k) => sc + "::" + k;
+const labels = {
+  "ledger":"recorded as a ledger Transaction", "income":"recorded as Income",
+  "info":"recorded as a note, no effect on units", "exclude":"left out of this import",
+  "flag":"flagged for you to check later",
+  "trust-ledger":"trusted our ledger", "trust-statement":"trusted the statement",
+  "opening":"booked as an opening balance", "skip-scheme":"not imported",
+  "ack":"acknowledged", "reimport":"asked for a fresh statement",
+  "review":"reviewed after import", "exclude-scheme":"left out of this import",
+  "purchase-redemption":"classified as purchase or redemption",
+};
+
+/* ================================================================== *
+ * Shared fragments
+ * ================================================================== */
+function fileChip(f){
+  const map = {parsed:["chip-ok","parsed"], "parsed-with-warnings":["chip-warn","parsed, with warnings"],
+               rejected:["chip-bad","not usable"], locked:["chip-info","locked"]};
+  if (f.parseFails) return '<span class="chip chip-bad">parse failed</span>';
+  const [cls,txt] = map[f.status] || ["chip-neutral",f.status];
+  return '<span class="chip '+cls+'">'+txt+'</span>';
+}
+
+function passwordBlock(m){
+  const st = DECISIONS[dk(m.sc,"pw")] || "idle";
+  const err = st === "wrong";
+  if (st === "ok") return '<div class="banner banner-ok"><div class="grow">'+
+      '<div class="row" style="gap:8px;margin-bottom:2px"><b>Unlocked</b><span class="chip chip-ok">read successfully</span></div>'+
+      '<p class="small muted" style="margin:0">The statement opened with the password you gave. It has not been kept and has not left this machine.</p>'+
+    '</div></div>';
+  return '<div class="card">'+
+    '<div class="lockbox">'+
+      '<div class="lockicon">&#128274;</div>'+
+      '<div class="grow">'+
+        '<h3 style="margin-bottom:3px">This statement is password-protected</h3>'+
+        '<p class="small muted" style="margin-bottom:12px">'+
+          'CAS files always arrive locked. <span class="mono">'+m.files[0].name+'</span> needs its password before anything can be read.'+
+        '</p>'+
+        '<div class="row">'+
+          '<input id="pw" type="password" placeholder="Statement password" style="flex:1; min-width:220px"'+
+                 ' onkeydown="if(event.key===\'Enter\')submitPw(\''+m.sc+'\')">'+
+          '<button class="btn btn-primary" onclick="submitPw(\''+m.sc+'\')">Unlock</button>'+
+        '</div>'+
+        (err ? '<div class="fielderr">That password didn\'t open the file. Nothing was read and nothing was written \u2014 try again.</div>' : "")+
+        '<ul class="tick">'+
+          '<li>Commonly the PAN in capitals, or the PAN in lower case followed by your date of birth.</li>'+
+          '<li>We never store it, never show it back, and never send it anywhere.</li>'+
+        '</ul>'+
+      '</div>'+
+    '</div>'+
+  '</div>';
+}
+
+function rtaGroups(m, rowFn){
+  const byRta = {};
+  m.schemes.forEach(s => (byRta[s.rta] = byRta[s.rta] || []).push(s));
+  const keys = Object.keys(byRta);
+  const head = '<thead><tr><th>Scheme</th><th class="right">Statement says</th><th class="right">Our ledger</th><th class="right">Difference</th><th>Cost basis</th></tr></thead>';
+  if (keys.length === 1) return '<table>'+head+'<tbody>'+m.schemes.map(rowFn).join("")+'</tbody></table>';
+  return keys.map(r=>'<div class="rtag" style="margin-top:14px">'+r+' \u2014 '+byRta[r].length+' Scheme'+(byRta[r].length>1?"s":"")+'</div>'+
+    '<table>'+head+'<tbody>'+byRta[r].map(rowFn).join("")+'</tbody></table>').join("");
+}
+
+/* ================================================================== *
+ * Async state + dispatch
+ * ================================================================== */
+const ASYNC = {};
+function dispatch(update){
+  const key = current.variant + "::" + current.scenario;
+  ASYNC[key] = {...ASYNC[key], ...update};
+  render();
+}
+
+/* ================================================================== *
+ * Steps helper
+ * ================================================================== */
+
+/* ================================================================== *
+ * Simulated async parsing
+ * ================================================================== */
+function simulateParsing(m, variantKey, onFileDone, onAllDone){
+  const key = current.variant + "::" + current.scenario;
+  const files = m.files.filter(f => f.status === "parsed" || f.parseFails);
+  const init = files.map(f => ({
+    name: f.name,
+    pages: f.pages,
+    progress: 0,
+    status: "waiting",
+    schemesRead: 0,
+    failReason: f.parseFails ? f.failReason : null,
+    willFail: !!f.parseFails,
+  }));
+  dispatch({ parseState: { files: init, complete: false } });
+
+  files.forEach((f, fi) => {
+    const delay = f.parseFails ? 800 : 500;
+    const steps = f.parseFails ? 8 : 6;
+    let step = 0;
+    const tick = () => {
+      step++;
+      const pct = Math.min(100, Math.round(step / steps * 100));
+      const cur = ASYNC[current.variant + "::" + current.scenario];
+      if (!cur || !cur.parseState) return;
+      const updated = [...cur.parseState.files];
+      if (f.parseFails && step >= steps) {
+        updated[fi] = {...updated[fi], progress: pct, status: "failed"};
+        dispatch({ parseState: {...cur.parseState, files: updated} });
+        onFileDone(fi, false);
+        return;
+      }
+      const schemesSoFar = !f.parseFails && pct >= 50 ? Math.ceil(pct / 25) : 0;
+      updated[fi] = {...updated[fi], progress: pct, status: "parsing", schemesRead: schemesSoFar};
+      dispatch({ parseState: {...cur.parseState, files: updated} });
+
+      if (step < steps) {
+        setTimeout(tick, delay);
+      } else {
+        const fin = [...updated];
+        fin[fi] = {...fin[fi], progress: 100, status: "done", schemesRead: m.schemes.length};
+        const allDone = fin.every(f2 => f2.status === "done" || f2.status === "failed");
+        dispatch({ parseState: {...cur.parseState, files: fin, complete: allDone} });
+        onFileDone(fi, true);
+        if (allDone) onAllDone();
+      }
+    };
+    setTimeout(tick, 100 + fi * 200);
+  });
+}
+
+
+/* ================================================================== *
+ * VARIANT C \u2014 "Decision wizard" (left sidebar + content area)
+ * ================================================================== */
+function C(m){
+  const sc = m.sc;
+  const key = current.variant + "::" + sc;
+  const cState = ASYNC[key] || {};
+  const pState = cState.parseState;
+  const step = cState.step || 1;
+  const showSheet = cState.showSheet;
+  const sheetPhase = cState.sheetPhase || "confirm";
+  const doneState = cState.doneState;
+  const feedDone = cState.feedDone;
+
+  function gatherItems(){
+    const items = [];
+    m.discarded.forEach(d => items.push({type:"discarded", d, sortKey:0}));
+    m.rejected.forEach(f => items.push({type:"rejected", f, sortKey:1}));
+    m.unknown.forEach((r,i) => items.push({type:"unknown", r, i, sortKey:2}));
+    m.unverified.forEach(s => items.push({type:"unverified", s, w: m.warnings.find(x=>x.scheme===s.key), sortKey:3}));
+    if (m.countGap) items.push({type:"countGap", sortKey:4});
+    items.sort((a,b) => a.sortKey - b.sortKey);
+    return items;
+  }
+
+  function sidebar(countInfo){
+    const steps = [
+      {label:"Files chosen", detail: m.files.length+' file'+(m.files.length!==1?'s':''), done:step>1, active:step===1},
+      {label:"Unlock", detail: m.locked.length ? 'locked' : '', done:step>2||(step===2&&!m.locked.length), active:step===2},
+      {label:"Parse", done:feedDone, active:step===3, progress: feedDone?'\u2713':''},
+      {label:"Decisions", detail: feedDone ? gatherItems().filter(it=>!!DECISIONS[dk(sc,it.type==="discarded"?"disc":it.type==="unknown"?"u"+it.i:it.type==="unverified"?"un-"+it.s.key:it.type==="countGap"?"count":it.type==="rejected"?"rej-"+it.f.name:"")]).length+'/'+gatherItems().length+' resolved' : '', done:step>4, active:step===4},
+      {label:"Import", done:!!doneState, active:step===5},
+    ];
+    return '<div class="wiz-sidebar">'+
+      steps.map((s,i) => {
+        const icon = s.done ? '\u2713' : (s.active ? '\u25CF' : (i+1)+'');
+        return '<div class="step-item '+(s.active?'active':s.done?'done':'')+'">'+
+          '<div class="step-icon">'+icon+'</div>'+
+          '<div class="grow"><div>'+s.label+'</div>'+(s.detail?'<div class="small" style="color:var(--muted)">'+s.detail+'</div>':'')+'</div>'+
+        '</div>';
+      }).join("")+
+    '</div>';
+  }
+
+  let content;
+  if (step === 1){
+    content = '<h1 style="margin-bottom:4px">Choose statements</h1>'+
+      '<p class="muted" style="margin-bottom:16px">Drop CAMS or KFintech statements to import.</p>'+
+      '<div class="dropzone" style="margin-bottom:16px"><div style="font-size:28px;margin-bottom:8px">&#128196;</div><p><b>Drop files here</b></p></div>'+
+      '<div class="stack">'+
+        m.files.map(f => {
+          const isRej = f.status === "rejected";
+          return '<div class="row-between" style="padding:10px 14px;background:var(--panel);border:1px solid '+(isRej?'var(--bad)':'var(--line)')+';border-radius:8px">'+
+          '<div class="grow"><div class="mono">'+f.name+'</div><div class="small muted">'+f.size+' \u00b7 '+f.pages+' pages'+
+          (isRej ? ' \u00b7 <span style="color:var(--bad)">'+f.reason+'</span>' : '')+'</div>'+
+          (isRej&&f.fix ? '<div class="small" style="color:var(--bad);margin-top:2px">Fix: '+f.fix+'</div>' : '')+
+          '</div>'+fileChip(f)+'</div>';
+        }).join("")+
+      '</div>'+
+      (m.rejected.length&&m.rejected.length===m.files.length
+        ? '<div class="banner banner-bad" style="margin-top:14px"><div class="grow"><b>None of these files could be parsed</b><p class="small" style="margin-top:2px">'+m.rejected.map(f=>f.reason).join("; ")+'</p>'+
+          '<button class="btn btn-sm" style="margin-top:6px" onclick="resetDecisions();ASYNC[\''+key+'\']={};render()">Try different files</button></div></div>'
+        : '<div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn btn-primary" onclick="advanceStep(\''+sc+'\')">Continue</button></div>');
+  } else if (step === 2){
+    if (m.locked.length && !m.schemes.length){
+      content = '<h1 style="margin-bottom:4px">Unlock statements</h1>'+passwordBlock(m)+
+        '<div class="row" style="justify-content:flex-end;margin-top:12px">'+
+          '<button class="btn btn-primary" onclick="submitPwAndAdvance(\''+sc+'\')">Unlock & Continue</button></div>';
+    } else if (feedDone || (pState && pState.complete)){
+      const itemKeys = it => it.type==="discarded"?"disc":it.type==="unknown"?"u"+it.i:it.type==="unverified"?"un-"+it.s.key:it.type==="countGap"?"count":it.type==="rejected"?"rej-"+it.f.name:"";
+      const allResolved = gatherItems().every(it => !!DECISIONS[dk(sc,itemKeys(it))]);
+      content = renderDecisionPhase() +
+        '<div class="row" style="justify-content:flex-end;gap:10px;margin-top:20px">'+
+        (allResolved
+          ? '<button class="btn btn-primary btn-lg" onclick="advanceStep(\''+sc+'\')">Continue to import \u2192</button>'
+          : '<button class="btn btn-primary" disabled>Resolve all decisions first</button>')+
+        '</div>';
+    } else {
+      if (!pState || !pState.files){
+        setTimeout(() => {
+          const k = current.variant + "::" + current.scenario;
+          if (!ASYNC[k] || !ASYNC[k].parseState){
+            simulateParsing(m, key, (fi, ok) => {
+              const cur = ASYNC[current.variant+"::"+current.scenario];
+              if (cur&&cur.parseState&&cur.parseState.files[fi]){
+                const fiData = cur.parseState.files[fi];
+                const feed = [...(cur.feed||[])];
+                if (fiData.status==="done") feed.push({file:fiData.name, text:fiData.schemesRead+' transactions read', ok:true});
+                else if (fiData.status==="failed") feed.push({file:fiData.name, text:fiData.failReason||'Parse failure', ok:false});
+                dispatch({feed});
+              }
+}, () => { dispatch({feedDone:true, step:4}); });
+          }
+        }, 200);
+      }
+      content = renderParsePhase();
+    }
+  } else if (step === 3 && !feedDone){
+    if (!pState || !pState.files){
+      setTimeout(() => {
+        const k = current.variant + "::" + current.scenario;
+        if (!ASYNC[k] || !ASYNC[k].parseState){
+          simulateParsing(m, key, (fi, ok) => {
+            const cur = ASYNC[current.variant+"::"+current.scenario];
+            if (cur&&cur.parseState&&cur.parseState.files[fi]){
+              const fiData = cur.parseState.files[fi];
+              const feed = [...(cur.feed||[])];
+              if (fiData.status==="done") feed.push({file:fiData.name, text:fiData.schemesRead+' transactions read', ok:true});
+              else if (fiData.status==="failed") feed.push({file:fiData.name, text:fiData.failReason||'Parse failure', ok:false});
+              dispatch({feed});
+            }
+          }, () => { dispatch({feedDone:true, step:4}); });
+        }
+      }, 200);
+    }
+    content = renderParsePhase();
+  } else if (step === 4 || (step===3&&feedDone) || (step===2&&feedDone) || (step===4&&!feedDone&&pState&&pState.complete)){
+    if (!feedDone && pState && pState.complete) setTimeout(()=>dispatch({feedDone:true}),50);
+    const itemKeys = it => it.type==="discarded"?"disc":it.type==="unknown"?"u"+it.i:it.type==="unverified"?"un-"+it.s.key:it.type==="countGap"?"count":it.type==="rejected"?"rej-"+it.f.name:"";
+    const allResolved = gatherItems().every(it => !!DECISIONS[dk(sc,itemKeys(it))]);
+    content = renderDecisionPhase() +
+      '<div class="row" style="justify-content:flex-end;gap:10px;margin-top:20px">'+
+      (allResolved
+        ? '<button class="btn btn-primary btn-lg" onclick="advanceStep(\''+sc+'\')">Continue to import \u2192</button>'
+        : '<button class="btn btn-primary" disabled>Resolve all decisions first</button>')+
+      '</div>';
+  } else if (step === 5){
+    if (doneState || (showSheet&&sheetPhase==="done")){
+      content = '<div class="success-banner-lg check-anim" style="margin-top:20px">'+
+        '<div class="check-circle check-anim">\u2713</div>'+
+        '<h1 style="font-size:18px;margin-bottom:4px">Done!</h1>'+
+        '<p class="small" style="margin:0 0 16px">'+(doneState||{}).txns+' Transactions imported.</p>'+
+        '<div class="card" style="text-align:left;max-width:400px;margin:0 auto">'+
+          '<div class="pad stack" style="gap:8px">'+
+            '<div class="row-between"><span>Transactions written</span><span class="num"><b>'+(doneState||{}).txns+'</b></span></div>'+
+            '<div class="row-between"><span>Opening balances seeded</span><span class="num"><b>'+(doneState||{}).openings+'</b></span></div>'+
+            '<div class="row-between"><span>Schemes affected</span><span class="num"><b>'+(doneState||{}).schemes+'</b></span></div>'+
+            '<div class="row-between"><span>Duplicates skipped</span><span class="num"><b>'+(doneState||{}).dups+'</b></span></div>'+
+          '</div></div></div>'+
+        '<div class="row" style="justify-content:center;margin-top:20px"><button class="btn btn-lg btn-primary">Go to portfolio</button></div>';
+    } else {
+      const items = gatherItems();
+      const itemKey = it => it.type==="discarded"?"disc":it.type==="unknown"?"u"+it.i:it.type==="unverified"?"un-"+it.s.key:it.type==="countGap"?"count":it.type==="rejected"?"rej-"+it.f.name:"";
+      const resolvedCount = items.filter(it => !!DECISIONS[dk(sc,itemKey(it))]).length;
+      content = '<h1 style="margin-bottom:4px">Confirm import</h1>'+
+        '<p class="muted" style="margin-bottom:18px">Everything is reviewed. This is what will be written to your ledger.</p>'+
+        '<div class="card" style="margin-bottom:16px">'+
+          '<div class="pad" style="border-bottom:1px solid var(--line);background:#fbfbf9">'+
+            '<div class="row-between"><h3 style="margin:0">Summary</h3><span class="chip chip-ok">ready to import</span></div>'+
+          '</div>'+
+          '<div class="pad"><table class="summary-table"><tbody>'+
+            '<tr><td>Files</td><td colspan="2" class="mono small">'+m.parseable.map(f=>f.name).join(", ")+'</td></tr>'+
+            '<tr><td>Transactions to write</td><td class="num"><b>'+m.txnCount+'</b></td><td class="small muted">across '+m.schemes.length+' Schemes</td></tr>'+
+            '<tr><td>Opening balances</td><td class="num"><b>'+m.openingBalances.length+'</b></td><td class="small muted">seeded, kept distinct from real Transactions</td></tr>'+
+            '<tr><td>Duplicates skipped</td><td class="num"><b>'+m.duplicates.skipped+'</b></td><td class="small muted">already in ledger</td></tr>'+
+            '<tr><td>Decisions resolved</td><td class="num"><b>'+resolvedCount+' / '+items.length+'</b></td><td class="small muted">recorded with this import</td></tr>'+
+          '</tbody></table></div></div>'+
+        (items.length ? '<div class="card" style="margin-bottom:16px">'+
+          '<div class="pad" style="border-bottom:1px solid var(--line)"><h3 style="margin:0">Your decisions</h3></div>'+
+          '<div class="pad stack" style="gap:6px">'+
+            items.map(it => {
+              const chosen = DECISIONS[dk(sc,itemKey(it))];
+              const label = it.type==="discarded"?"Missing Scheme"
+                : it.type==="rejected"?('Rejected file: '+it.f.name)
+                : it.type==="unknown"?('UNKNOWN row \u00b7 '+inr(it.r.amount))
+                : it.type==="unverified"?('Balance: '+it.s.name.split(" \u2013 ")[0])
+                : 'Scheme count gap';
+              return '<div class="row" style="border-bottom:1px solid var(--line);padding:6px 0">'+
+                '<span class="grow small">'+label+'</span>'+
+                '<span class="chip '+(chosen?'chip-ok':'chip-warn')+'">'+(chosen?(labels[chosen]||chosen):'unresolved')+'</span></div>';
+            }).join("")+
+          '</div></div>' : '')+
+        '<div class="row" style="justify-content:flex-end;gap:10px">'+
+          '<button class="btn btn-ghost" onclick="dispatch({step:4,showSheet:false,sheetPhase:\'confirm\',doneState:null})">Back to decisions</button>'+
+          '<button class="btn btn-primary btn-lg" onclick="doCommitC(\''+sc+'\')">Import '+m.txnCount+' Transactions</button>'+
+        '</div>';
+    }
+  } else {
+    content = '<p class="muted">Loading\u2026</p>';
+  }
+
+  function renderParsePhase(){
+    const feed = (cState.feed||[]);
+    const pf = pState && pState.files ? pState.files : m.files.filter(f => f.status==="parsed"||f.parseFails).map(f => ({
+      name: f.name, pages: f.pages, progress: 0, status: "waiting", schemesRead: 0,
+      failReason: f.parseFails ? f.failReason : null, willFail: !!f.parseFails
+    }));
+    const done = pf.filter(f => f.status === "done").length;
+    const failed = pf.filter(f => f.status === "failed").length;
+    const total = pf.length;
+    const allDone = pf.every(f => f.status === "done" || f.status === "failed");
+    const overallPct = total ? Math.round((done+failed)/total*100) : 0;
+
+    return '<h1 style="margin-bottom:4px">Processing files</h1>'+
+      '<p class="muted" style="margin-bottom:16px">Each file is read independently. Failed files appear inline.</p>'+
+      '<div class="overall-progress" style="max-width:500px"><i style="width:'+overallPct+'%"></i></div>'+
+      '<div class="feed-panel" style="max-width:600px">'+
+        pf.map((f, fi) => {
+          const feedItem = feed.find(e => e.file === f.name);
+          if (feedItem){
+            return '<div class="feed-item '+(feedItem.ok?'':'fail')+'">'+
+              '<div class="feed-icon '+(feedItem.ok?'done':'fail')+'">'+(feedItem.ok?'\u2713':'\u2716')+'</div>'+
+              '<div class="grow"><div class="mono small" style="font-weight:600">'+f.name+'</div>'+
+              '<div class="small '+(!feedItem.ok?'':'muted')+'" style="'+(feedItem.ok?'':'color:var(--bad);font-weight:600')+'">'+feedItem.text+'</div>'+
+              (!feedItem.ok ? '<div class="small muted" style="margin-top:2px">Download the statement fresh from CAMS and try again.</div>'+
+                '<button class="btn btn-sm btn-ghost" style="margin-top:4px" onclick="feedDismiss(\''+sc+'\')">Dismiss & continue</button>' : '')+
+            '</div></div>';
+          }
+          if (f.status === "failed"){
+            return '<div class="feed-item fail"><div class="feed-icon fail">\u2716</div>'+
+              '<div class="grow"><div class="mono small" style="font-weight:600">'+f.name+'</div>'+
+              '<div class="small" style="color:var(--bad);font-weight:600">'+(f.failReason||'Parse failure')+'</div>'+
+              '<div class="small muted" style="margin-top:2px">Download the statement fresh from CAMS and try again.</div>'+
+              '<button class="btn btn-sm btn-ghost" style="margin-top:4px" onclick="feedDismiss(\''+sc+'\')">Dismiss & continue</button></div></div>';
+          }
+          return '<div class="feed-item"><div class="feed-icon pending">\u25D4</div>'+
+            '<div class="grow"><div class="mono small">'+f.name+'</div>'+
+            '<div class="small muted">'+(f.status==="parsing"?'Reading page '+Math.round(f.progress/100*f.pages)+' of '+f.pages+' \u2026':'Waiting\u2026')+'</div></div></div>';
+        }).join("")+
+        (allDone ? '<div class="feed-item" style="background:var(--ok-bg)">'+
+          '<div class="feed-icon done">\u2713</div>'+
+          '<div class="grow"><b>All files processed</b><span class="small muted" style="margin-left:8px">'+done+' parsed'+(failed?', '+failed+' failed':'')+'</span></div>'+
+          '<button class="btn btn-sm btn-primary" onclick="dispatch({feedDone:true,step:4})">Continue to review</button></div>' : '')+
+      '</div>'+
+      (m.rejected.length ? '<div class="card bad" style="margin-top:14px;max-width:600px"><div class="pad">'+
+        '<div class="row-between" style="margin-bottom:6px"><b>'+m.rejected.length+' file'+(m.rejected.length>1?'s':'')+' were not accepted</b><span class="chip chip-bad">rejected</span></div>'+
+        m.rejected.map(f => '<div class="row" style="padding:4px 0;border-bottom:1px solid var(--line)">'+
+          '<span class="small mono" style="min-width:160px">'+f.name+'</span><span class="small grow" style="color:var(--bad)">'+f.reason+'</span>'+
+          (f.fix?'<span class="small muted">'+f.fix+'</span>':'')+
+        '</div>').join("")+
+      '</div></div>' : '');
+  }
+
+  function renderDecisionPhase(){
+    const items = gatherItems();
+    const resolved = items.filter(it => {
+      const k = it.type==="discarded"?"disc":it.type==="unknown"?"u"+it.i:it.type==="unverified"?"un-"+it.s.key:it.type==="countGap"?"count":it.type==="rejected"?"rej-"+it.f.name:"";
+      return !!DECISIONS[dk(sc,k)];
+    }).length;
+    const allResolved = resolved === items.length;
+
+    return '<h1 style="margin-bottom:4px">Review decisions</h1>'+
+      '<p class="muted" style="margin-bottom:16px">'+resolved+' of '+items.length+' resolved.</p>'+
+      '<div style="max-width:680px">'+
+        (items.length === 0
+          ? '<div class="banner banner-ok"><div class="grow"><b>Everything is clear</b><p class="small muted" style="margin:2px 0 0">No decisions needed. Ready to import.</p></div></div>'
+          : items.map(it => {
+            const k = it.type==="discarded"?"disc":it.type==="unknown"?"u"+it.i:it.type==="unverified"?"un-"+it.s.key:it.type==="countGap"?"count":it.type==="rejected"?"rej-"+it.f.name:"";
+            const chosen = DECISIONS[dk(sc,k)];
+            const done = !!chosen;
+            if (it.type === "rejected"){
+              const f = it.f;
+              return '<div class="decision-card-lg '+(done?'done':'')+'">'+
+                (done ? '<div class="dc-overlay check-anim">\u2713</div>' : '')+
+                '<div class="dc-head" style="background:'+(done?'var(--ok-bg)':'var(--bad-bg)')+'">'+
+                  '<span class="chip chip-bad">rejected</span><span class="grow" style="font-weight:600">'+f.name+'</span>'+
+                  (done ? '<span class="chip chip-ok">resolved</span>' : '')+'</div>'+
+                '<div class="dc-body">'+
+                  '<p style="font-weight:600;color:var(--bad);margin:0 0 4px">'+f.reason+'</p>'+
+                  (f.fix ? '<p class="small muted" style="margin:0 0 8px">Suggested fix: '+f.fix+'</p>' : '')+
+                  (done ? '<div class="small" style="color:var(--ok)">'+labels[chosen]+' <button class="btn btn-sm btn-ghost" onclick="pick(\''+sc+'\',\'rej-'+f.name+'\',\'\')">change</button></div>'
+                  : '<div class="choices"><button class="choice" onclick="pick(\''+sc+'\',\'rej-'+f.name+'\',\'ack\')">Acknowledge, continue without it</button>'+
+                    '<button class="choice" onclick="resetDecisions();ASYNC[\''+key+'\']={};render()">Get the right file</button></div>')+
+                '</div></div>';
+            }
+            if (it.type === "discarded"){
+              const d = it.d;
+              return '<div class="decision-card-lg '+(done?'done':'')+'">'+
+                (done ? '<div class="dc-overlay check-anim">\u2713</div>' : '')+
+                '<div class="dc-head" style="background:'+(done?'var(--ok-bg)':'var(--bad-bg)')+'">'+
+                  '<span class="chip chip-bad">missing scheme</span><span class="grow" style="font-weight:600">A Scheme is missing from this import</span>'+
+                  (done ? '<span class="chip chip-ok">resolved</span>' : '')+'</div>'+
+                '<div class="dc-body">'+
+                  '<p style="font-weight:600;color:var(--bad);margin:0 0 6px;font-size:13px">'+d.text+'</p>'+
+                  '<p class="small muted" style="margin:0 0 8px">Statement prints <b>'+m.statementTotals.schemes+' Schemes</b>; '+m.counts.parsedSchemes+' were read. <b>This Scheme is not in this import at all.</b></p>'+
+                  (done ? '<div class="small" style="color:var(--ok)">'+labels[chosen]+' <button class="btn btn-sm btn-ghost" onclick="pick(\''+sc+'\',\'disc\',\'\')">change</button></div>'
+                  : '<div class="choices"><button class="choice" onclick="pick(\''+sc+'\',\'disc\',\'reimport\')">Get fresh statement and retry</button>'+
+                    '<button class="choice" onclick="pick(\''+sc+'\',\'disc\',\'review\')">Import the rest, flag this</button></div>')+
+                '</div></div>';
+            }
+            if (it.type === "unknown"){
+              const r = it.r;
+              return '<div class="decision-card-lg '+(done?'done':'')+'">'+
+                (done ? '<div class="dc-overlay check-anim">\u2713</div>' : '')+
+                '<div class="dc-head" style="background:'+(done?'var(--ok-bg)':'var(--warn-bg)')+'">'+
+                  '<span class="chip chip-typed">UNKNOWN</span><span class="grow" style="font-weight:600">'+HOLDINGS[r.scheme].name.split(" \u2013 ")[0]+'</span>'+
+                  (done ? '<span class="chip chip-ok">resolved</span>' : '')+'</div>'+
+                '<div class="dc-body">'+
+                  '<div class="small muted" style="margin-bottom:6px">'+dmy(r.date)+' \u00b7 page '+r.page+'</div>'+
+                  '<p style="font-size:22px;font-weight:700;color:var(--bad);margin:0 0 4px">'+inr(r.amount)+'</p>'+
+                  '<p class="small" style="margin:0 0 4px"><code>'+r.description+'</code></p>'+
+                  '<p class="small muted" style="margin:0 0 8px">'+u3(r.units)+' units at \u20b9'+r.nav+'</p>'+
+                  (done ? '<div class="small" style="color:var(--ok)">'+labels[chosen]+' <button class="btn btn-sm btn-ghost" onclick="pick(\''+sc+'\',\'u'+it.i+'\',\'\')">change</button></div>'
+                  : '<div class="choices"><button class="choice" onclick="pick(\''+sc+'\',\'u'+it.i+'\',\'ledger\')">It\'s a purchase or redemption</button>'+
+                    '<button class="choice" onclick="pick(\''+sc+'\',\'u'+it.i+'\',\'info\')">Just a note</button>'+
+                    '<button class="choice" onclick="pick(\''+sc+'\',\'u'+it.i+'\',\'exclude\')">Leave out for now</button></div>')+
+                '</div></div>';
+            }
+            if (it.type === "unverified"){
+              const s = it.s;
+              const ch = DECISIONS[dk(sc,"un-"+s.key)];
+              return '<div class="decision-card-lg '+(done?'done':'')+'">'+
+                (done ? '<div class="dc-overlay check-anim">\u2713</div>' : '')+
+                '<div class="dc-head" style="background:'+(done?'var(--ok-bg)':'var(--warn-bg)')+'">'+
+                  '<span class="chip chip-warn">balance</span><span class="grow" style="font-weight:600">'+s.name.split(" \u2013 ")[0]+'</span>'+
+                  '<span class="chip chip-warn">'+u3(s.delta)+' units</span>'+
+                  (done ? '<span class="chip chip-ok">resolved</span>' : '')+'</div>'+
+                '<div class="dc-body">'+
+                  '<p class="small" style="margin:0 0 6px">'+(it.w?it.w.text:'')+'</p>'+
+                  '<p class="small muted" style="margin:0 0 8px">Statement says '+u3(s.close)+' units \u00b7 Our ledger has '+u3(s.derived)+' units</p>'+
+                  (done ? '<div class="small" style="color:var(--ok)">'+labels[chosen]+' <button class="btn btn-sm btn-ghost" onclick="pick(\''+sc+'\',\'un-'+s.key+'\',\'\')">change</button></div>'
+                  : '<div class="choices"><button class="choice" onclick="pick(\''+sc+'\',\'un-'+s.key+'\',\'trust-ledger\')">Trust our ledger</button>'+
+                    '<button class="choice" onclick="pick(\''+sc+'\',\'un-'+s.key+'\',\'trust-statement\')">Trust the statement</button>'+
+                    '<button class="choice" onclick="pick(\''+sc+'\',\'un-'+s.key+'\',\'exclude-scheme\')">Leave this Scheme out</button></div>')+
+                '</div></div>';
+            }
+            if (it.type === "countGap"){
+              return '<div class="decision-card-lg" style="border-color:var(--warn)"><div class="dc-head" style="background:var(--warn-bg)">'+
+                '<span class="chip chip-warn">count gap</span><span class="grow" style="font-weight:600">Scheme count looks low</span>'+
+                '<span class="chip chip-warn">'+m.countGap+' short</span></div>'+
+                '<div class="dc-body"><p class="small muted" style="margin:0">Statement footer totals '+m.statementTotals.schemes+' Schemes; '+m.counts.parsedSchemes+' read.</p></div></div>';
+            }
+            return "";
+          }).join(""))+
+      '</div>';
+  }
+
+  return '<div class="wiz-layout">'+sidebar()+'<div class="wiz-content">'+content+'</div></div>';
+}
+
+/* ================================================================== *
+ * Chrome, navigation, event wiring
+ * ================================================================== */
+let current = { variant: "C",
+                scenario: new URLSearchParams(location.search).get("scenario") || "first-import" };
+
+function setUrl(){
+  const p = new URLSearchParams();
+  p.set("scenario", current.scenario);
+  history.replaceState(null,"","?"+p.toString());
+}
+function resetDecisions(){ Object.keys(DECISIONS).forEach(k=>delete DECISIONS[k]); render(); }
+function pick(sc,k,v){
+  if (DECISIONS[dk(sc,k)] === v) delete DECISIONS[dk(sc,k)];
+  else if (v) DECISIONS[dk(sc,k)] = v;
+  else delete DECISIONS[dk(sc,k)];
+  render();
+}
+function submitPw(sc){
+  if (DECISIONS[dk(sc,"pw")] === "wrong") DECISIONS[dk(sc,"pw")] = "ok";
+  else DECISIONS[dk(sc,"pw")] = "wrong";
+  render();
+}
+function submitPwAndAdvance(sc){
+  submitPw(sc);
+  if (DECISIONS[dk(sc,"pw")] === "ok"){
+    setTimeout(() => advanceStep(sc), 300);
+  }
+}
+function advanceStep(sc){
+  const key = current.variant + "::" + sc;
+  const cur = ASYNC[key] || {};
+  dispatch({step: (cur.step || 1) + 1});
+}
+function doCommitC(sc){
+  const m = model(sc);
+  dispatch({showSheet:true, sheetPhase:"done",
+    doneState:{txns:m.txnCount, schemes:m.schemes.length, openings:m.openingBalances.length, dups:m.duplicates.skipped},
+    step:5});
+}
+function feedDismiss(sc){
+  const key = current.variant + "::" + sc;
+  const cur = ASYNC[key] || {};
+  dispatch({feed:[...(cur.feed||[])],
+    feedDone: cur.parseState ? cur.parseState.files.every(f=>f.status==="done"||f.status==="failed") : false});
+}
+function render(){
+  const m = model(current.scenario);
+  const app = document.getElementById("app");
+  const focused = document.activeElement && document.activeElement.id;
+  app.innerHTML = C(m);
+  if (focused === "pw"){ const el = document.getElementById("pw"); if (el) el.focus(); }
+  const sel = document.getElementById("scen");
+  sel.value = current.scenario;
+  const s = SCENARIOS[current.scenario];
+  document.getElementById("scenhint").textContent = s.hint;
+  setUrl();
+}
+const sel = document.getElementById("scen");
+Object.entries(SCENARIOS).forEach(([k,v])=>{ const o=document.createElement("option"); o.value=k; o.textContent=v.label; sel.appendChild(o); });
+sel.onchange = e => { current.scenario = e.target.value; render(); };
+render();
+</script>
+</body>
+</html>
