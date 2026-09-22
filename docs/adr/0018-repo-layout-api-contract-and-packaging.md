@@ -42,7 +42,7 @@ non-Docker alternative.
 | `dev` | uvicorn (hot-reload) + Vite dev server concurrently |
 | `test` | `uv run pytest` in `backend/`, `npm test` in `frontend/` |
 | `lint` | `uv run ruff` in `backend/`, `npx eslint` in `frontend/` |
-| `typecheck` | `uv run pyright` in `backend/`, `npx tsc --noEmit` in `frontend/` |
+| `typecheck` | `uv run mypy --strict` in `backend/`, `npx tsc --noEmit` in `frontend/` |
 | `check` | lint + typecheck + test |
 | `db:migrate` | `uv run alembic upgrade head` |
 | `docker:build` | `docker compose build` |
@@ -66,3 +66,5 @@ in dev. Variables:
   is the codegen tool, not humans.
 - `uv run` prefixes every Python task because uv's venv is not implicitly on `$PATH`
   inside mise tasks. This is explicit but slightly noisy.
+- The backend type checker is `mypy --strict`; ADR-0026 supersedes this ADR's
+  original choice of `pyright` and sets the strictness posture for both languages.
