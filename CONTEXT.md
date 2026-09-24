@@ -52,6 +52,18 @@ _Avoid_: Transaction (a Transaction may be internal), movement, transfer
 A parcel of units within a Position acquired in a single Transaction, carrying its own acquisition date and cost basis. Lots are reduced by FIFO or average-cost depending on the reporting need.
 _Avoid_: Tax lot, parcel, tranche
 
+**Opening Balance**:
+A synthetic Transaction that seeds a Position's starting quantity at a given date, used when no known history exists before that point. Seeded automatically on a first import (ADR 0001). Distinguishable from real Transactions in reporting; never editable or deletable. A mid-history gap uses an Adjustment Transaction instead.
+_Avoid_: Startup balance, genesis lot, seed entry
+
+**Adjustment Transaction**:
+A Transaction of kind `RECONCILIATION_ADJUSTMENT`, written when "Trust the statement" is chosen for an unexplained mismatch between the statement's printed closing and the derived Position. Dated at the statement's closing date for the delta units, with cost derived from the printed statement's valuation or the period-end NAV. Marked synthetic so reporting can exclude it from real-event counts and P&L attribution.
+_Avoid_: Correction entry, fixing row, adjustment (ambiguous)
+
+**Reconciliation Record**:
+A non-ledger record created when a mismatch between a statement's printed closing and the derived Position is resolved. Stores the action taken (trusted ledger, trust statement via adjustment, or omitted), the units delta, cost basis (if any), parser version, and timestamp. Surfaced on the Position timeline and the import log. Never affects financial maths.
+_Avoid_: Correction log, discrepancy note, audit trail (too broad)
+
 **Valuation Strategy**:
 How a Position's current worth is determined. One of **market-priced** (units × price from a feed), **accrual** (principal + rate + elapsed time), **appraised** (user-supplied revaluation), or **yield-derived** (an Income figure capitalised at a rate — a rented property's rent ÷ cap rate).
 _Avoid_: Pricing method, valuation type
