@@ -1,0 +1,27 @@
+name: Check
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jdx/mise-action@v2
+        with:
+          cache: true
+
+      - name: Install dependencies
+        run: |
+          mise run install:backend
+          mise run install:frontend
+
+      - name: Run full check gate
+        run: mise run check

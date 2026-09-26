@@ -5,7 +5,7 @@ uv = "latest"
 
 [tasks]
 # ── install ──────────────────────────────────────────────
-install = { depends = ["install:backend", "install:frontend", "install:hooks"] }
+install = { depends = ["install:backend", "install:frontend"], run = "mise run install:hooks" }
 
 "install:backend" = { dir = "backend", run = "uv sync" }
 "install:frontend" = { dir = "frontend", run = "npm install" }
