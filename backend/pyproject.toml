@@ -1,0 +1,51 @@
+[project]
+name = "wealth-tracker-backend"
+version = "0.0.1"
+description = "Wealth Tracker — privacy-focused household wealth tracking"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115,<1",
+    "uvicorn[standard]>=0.34,<1",
+    "sqlalchemy>=2.0,<3",
+    "alembic>=1.14,<2",
+    "pydantic>=2.10,<3",
+    "pydantic-settings>=2.7,<3",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8,<9",
+    "httpx>=0.28,<1",
+    "mypy>=1.14,<2",
+    "ruff>=0.9,<1",
+    "pre-commit>=4,<5",
+    "openapi-core>=0.19,<1",
+    "types-requests>=2,<3",
+]
+
+[tool.mypy]
+strict = true
+plugins = ["pydantic.mypy"]
+disallow_any_expr = true
+disallow_any_explicit = true
+warn_unreachable = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.alembic]
+script_location = "alembic"
+sqlalchemy_url = "sqlite:///./data/wealth.db"
