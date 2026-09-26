@@ -1,0 +1,47 @@
+[tools]
+python = "3.12"
+node = "22"
+uv = "latest"
+
+[tasks]
+# ── install ──────────────────────────────────────────────
+install = { depends = ["install:backend", "install:frontend"], run = "mise run install:hooks" }
+
+"install:backend" = { dir = "backend", run = "uv sync" }
+"install:frontend" = { dir = "frontend", run = "npm install" }
+"install:hooks" = { run = "uv run --project backend pre-commit install" }
+
+# ── dev ──────────────────────────────────────────────────
+dev = { depends = ["dev:backend", "dev:frontend"] }
+
+"dev:backend" = { dir = "backend", run = "uv run uvicorn app.main:app --reload --port 8000" }
+"dev:frontend" = { dir = "frontend", run = "npm run dev" }
+
+# ── test ─────────────────────────────────────────────────
+test = { depends = ["test:backend", "test:frontend"] }
+
+"test:backend" = { dir = "backend", run = "uv run pytest" }
+"test:frontend" = { dir = "frontend", run = "npm test" }
+
+# ── lint ─────────────────────────────────────────────────
+lint = { depends = ["lint:backend", "lint:frontend"] }
+
+"lint:backend" = { dir = "backend", run = "uv run ruff check . && uv run ruff format --check ." }
+"lint:frontend" = { dir = "frontend", run = "npm run lint && npx prettier --check ." }
+
+# ── typecheck ────────────────────────────────────────────
+typecheck = { depends = ["typecheck:backend", "typecheck:frontend"] }
+
+"typecheck:backend" = { dir = "backend", run = "uv run mypy --strict app" }
+"typecheck:frontend" = { dir = "frontend", run = "npm run typecheck" }
+
+# ── API codegen ──────────────────────────────────────────
+"api:spec" = { dir = "backend", run = "uv run python -m app.cli export-openapi --output ../shared/openapi.json" }
+"api:types" = { dir = "frontend", run = "npx openapi-typescript ../shared/openapi.json -o src/api/schema.d.ts" }
+"api:check" = { run = "git diff --exit-code -- shared/openapi.json frontend/src/api/schema.d.ts" }
+
+# ── check (full CI gate) ─────────────────────────────────
+check = { depends = ["lint", "typecheck", "test"], run = "mise run api:check" }
+
+# ── db ───────────────────────────────────────────────────
+"db:migrate" = { dir = "backend", run = "uv run alembic upgrade head" }

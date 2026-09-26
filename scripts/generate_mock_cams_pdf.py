@@ -13,16 +13,39 @@ from decimal import Decimal
 
 from fpdf import FPDF
 
-
 # ---------------------------------------------------------------------------
 # Synthetic data
 # ---------------------------------------------------------------------------
 
 SCHEMES_META = [
-    ("HGFG", "HDFC Top 200 Fund - Direct Plan - Growth", "INF123VGHI56", "123456", "HDFC Mutual Fund"),
-    ("ICPG", "ICICI Prudential Value Discovery Fund - Direct - Growth", "INF109KIBB78", "234567", "ICICI Prudential Mutual Fund"),
-    ("SBEC", "SBI Equity Hybrid Fund - Direct Plan - Growth", "INF200KJCC90", "345678", "SBI Mutual Fund"),
-    ("KKMF", "Kotak Flexicap Fund - Direct - Growth", "INF174KJDD12", "456789", "Kotak Mahindra Mutual Fund"),
+    (
+        "HGFG",
+        "HDFC Top 200 Fund - Direct Plan - Growth",
+        "INF123VGHI56",
+        "123456",
+        "HDFC Mutual Fund",
+    ),
+    (
+        "ICPG",
+        "ICICI Prudential Value Discovery Fund - Direct - Growth",
+        "INF109KIBB78",
+        "234567",
+        "ICICI Prudential Mutual Fund",
+    ),
+    (
+        "SBEC",
+        "SBI Equity Hybrid Fund - Direct Plan - Growth",
+        "INF200KJCC90",
+        "345678",
+        "SBI Mutual Fund",
+    ),
+    (
+        "KKMF",
+        "Kotak Flexicap Fund - Direct - Growth",
+        "INF174KJDD12",
+        "456789",
+        "Kotak Mahindra Mutual Fund",
+    ),
 ]
 
 
@@ -47,11 +70,11 @@ class SchemeData:
 
     @property
     def close_units(self) -> Decimal:
-        return self.transactions[-1].balance if self.transactions else Decimal("0")
+        return self.transactions[-1].balance if self.transactions else Decimal(0)
 
     @property
     def last_nav(self) -> Decimal:
-        return self.transactions[-1].nav if self.transactions else Decimal("0")
+        return self.transactions[-1].nav if self.transactions else Decimal(0)
 
     @property
     def last_value(self) -> Decimal:
@@ -74,7 +97,7 @@ def _generate_transactions(
 ) -> list[Transaction]:
     rng = random.Random(seed)
     transactions: list[Transaction] = []
-    balance = Decimal("0")
+    balance = Decimal(0)
     nav_start = Decimal(str(round(rng.uniform(10, 100), 4)))
 
     txn_date = start_date + timedelta(days=rng.randint(1, 15))
@@ -94,30 +117,49 @@ def _generate_transactions(
             weights=[4, 3, 2, 1],
         )[0]
         nav = nav_start + Decimal(str(round(rng.uniform(-5, 15), 4)))
-        if nav < Decimal("1"):
+        if nav < Decimal(1):
             nav = nav_start
         if txn_type == "Purchase":
             amount = Decimal(str(round(rng.uniform(5000, 50000), 2)))
             units = (amount / nav).quantize(Decimal("0.001"))
             balance += units
-            transactions.append(Transaction(current_date, txn_type, -amount, units, nav, balance))
+            transactions.append(
+                Transaction(current_date, txn_type, -amount, units, nav, balance)
+            )
         elif txn_type == "Redemption":
-            if balance < Decimal("100"):
+            if balance < Decimal(100):
                 continue
-            units_to_sell = (Decimal(str(round(rng.uniform(100, min(500, int(balance))), 3))) / nav).quantize(Decimal("0.001"))
+            units_to_sell = (
+                Decimal(str(round(rng.uniform(100, min(500, int(balance))), 3))) / nav
+            ).quantize(Decimal("0.001"))
             if units_to_sell >= balance:
                 units_to_sell = balance - Decimal("0.001")
             amount = (units_to_sell * nav).quantize(Decimal("0.01"))
             balance -= units_to_sell
-            transactions.append(Transaction(current_date, txn_type, amount, -units_to_sell, nav, balance))
+            transactions.append(
+                Transaction(
+                    current_date, txn_type, amount, -units_to_sell, nav, balance
+                )
+            )
         else:
             rate = rng.choice([Decimal("0.50"), Decimal("1.00"), Decimal("2.00")])
             div_amount = (rate * balance / nav).quantize(Decimal("0.01"))
-            transactions.append(Transaction(current_date, "IDCW", div_amount, Decimal("0"), nav, balance))
+            transactions.append(
+                Transaction(current_date, "IDCW", div_amount, Decimal(0), nav, balance)
+            )
 
     nav_final = nav_start + Decimal(str(round(rng.uniform(0, 20), 4)))
     if transactions:
-        transactions.append(Transaction(end_date, "(Adjustment)", Decimal("0"), Decimal("0"), nav_final, transactions[-1].balance))
+        transactions.append(
+            Transaction(
+                end_date,
+                "(Adjustment)",
+                Decimal(0),
+                Decimal(0),
+                nav_final,
+                transactions[-1].balance,
+            )
+        )
 
     return transactions
 
@@ -178,7 +220,14 @@ class CAMSPDF(FPDF):
     def _spacing(self, pt: float) -> None:
         self.ln(pt)
 
-    def _line(self, text: str, style: str = "", size: int = 9, x: float = L, bold: bool = False) -> None:
+    def _line(
+        self,
+        text: str,
+        style: str = "",
+        size: int = 9,
+        x: float = L,
+        bold: bool = False,
+    ) -> None:
         fs = "B" if bold else style
         self.set_font("Helvetica", fs, size)
         self.set_xy(x, self.get_y())
@@ -212,7 +261,13 @@ class CAMSPDF(FPDF):
         self._place_hdr("Unit Balance", row_y)
         self.set_y(row_y + CELL_H)
 
-    def generate(self, output_path: str, period_start: date, period_end: date, folios: list[FolioData]) -> None:
+    def generate(
+        self,
+        output_path: str,
+        period_start: date,
+        period_end: date,
+        folios: list[FolioData],
+    ) -> None:
         self.add_page()
         self._cache_header_widths()
 
@@ -229,7 +284,9 @@ class CAMSPDF(FPDF):
         self._spacing(5)
 
         # Period
-        period_str = f"{period_start.strftime('%d-%b-%Y')} To {period_end.strftime('%d-%b-%Y')}"
+        period_str = (
+            f"{period_start.strftime('%d-%b-%Y')} To {period_end.strftime('%d-%b-%Y')}"
+        )
         self._line(period_str, "", 10)
         self._spacing(8)
 
@@ -269,7 +326,7 @@ class CAMSPDF(FPDF):
                 self._spacing(2)
 
                 # Opening Unit Balance
-                self._line(f"Opening Unit Balance : 0.000", "", 9)
+                self._line("Opening Unit Balance : 0.000", "", 9)
                 self._spacing(2)
 
                 # Transaction table header
@@ -287,8 +344,16 @@ class CAMSPDF(FPDF):
 
                 # Footer
                 self._line(f"Closing Unit Balance : {scheme.close_units:.3f}", "", 9)
-                self._line(f"NAV on {period_end.strftime('%d-%b-%Y')} : INR {scheme.last_nav:.4f}", "", 9)
-                self._line(f"Valuation on {period_end.strftime('%d-%b-%Y')} : INR {scheme.last_value:.2f}", "", 9)
+                self._line(
+                    f"NAV on {period_end.strftime('%d-%b-%Y')} : INR {scheme.last_nav:.4f}",
+                    "",
+                    9,
+                )
+                self._line(
+                    f"Valuation on {period_end.strftime('%d-%b-%Y')} : INR {scheme.last_value:.2f}",
+                    "",
+                    9,
+                )
                 self._line("Total Cost Value : INR 0.00", "", 9)
                 self._spacing(8)
 
@@ -300,27 +365,46 @@ def make_mock_data() -> list[FolioData]:
     period_end = date(2025, 3, 31)
     return [
         FolioData(
-            folio_no="1234567890", pan="ABCDE1234F", holder_name="JOHN DOE",
+            folio_no="1234567890",
+            pan="ABCDE1234F",
+            holder_name="JOHN DOE",
             schemes=[
                 SchemeData(
-                    code=SCHEMES_META[0][0], name=SCHEMES_META[0][1],
-                    isin=SCHEMES_META[0][2], amfi=SCHEMES_META[0][3], amc=SCHEMES_META[0][4],
-                    transactions=_generate_transactions("HGFG", period_start, period_end, 42),
+                    code=SCHEMES_META[0][0],
+                    name=SCHEMES_META[0][1],
+                    isin=SCHEMES_META[0][2],
+                    amfi=SCHEMES_META[0][3],
+                    amc=SCHEMES_META[0][4],
+                    transactions=_generate_transactions(
+                        "HGFG", period_start, period_end, 42
+                    ),
                 ),
                 SchemeData(
-                    code=SCHEMES_META[1][0], name=SCHEMES_META[1][1],
-                    isin=SCHEMES_META[1][2], amfi=SCHEMES_META[1][3], amc=SCHEMES_META[1][4],
-                    transactions=_generate_transactions("ICPG", period_start, period_end, 99),
+                    code=SCHEMES_META[1][0],
+                    name=SCHEMES_META[1][1],
+                    isin=SCHEMES_META[1][2],
+                    amfi=SCHEMES_META[1][3],
+                    amc=SCHEMES_META[1][4],
+                    transactions=_generate_transactions(
+                        "ICPG", period_start, period_end, 99
+                    ),
                 ),
             ],
         ),
         FolioData(
-            folio_no="9876543210", pan="XYZPD1234K", holder_name="JOHN DOE",
+            folio_no="9876543210",
+            pan="XYZPD1234K",
+            holder_name="JOHN DOE",
             schemes=[
                 SchemeData(
-                    code=SCHEMES_META[2][0], name=SCHEMES_META[2][1],
-                    isin=SCHEMES_META[2][2], amfi=SCHEMES_META[2][3], amc=SCHEMES_META[2][4],
-                    transactions=_generate_transactions("SBEC", period_start, period_end, 77),
+                    code=SCHEMES_META[2][0],
+                    name=SCHEMES_META[2][1],
+                    isin=SCHEMES_META[2][2],
+                    amfi=SCHEMES_META[2][3],
+                    amc=SCHEMES_META[2][4],
+                    transactions=_generate_transactions(
+                        "SBEC", period_start, period_end, 77
+                    ),
                 ),
             ],
         ),
@@ -329,6 +413,7 @@ def make_mock_data() -> list[FolioData]:
 
 if __name__ == "__main__":
     import sys
+
     output = sys.argv[1] if len(sys.argv) > 1 else "mock_cams_cas.pdf"
     pdf = CAMSPDF()
     pdf.generate(output, date(2024, 4, 1), date(2025, 3, 31), make_mock_data())

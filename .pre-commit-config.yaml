@@ -1,0 +1,62 @@
+# Pre-commit hooks for Wealth Tracker.
+# ADR 0026: fast subset on every commit; full gate (`mise run check`) in CI.
+# mypy + tsc run at pre-push, not pre-commit.
+
+repos:
+  # ── Generic file-hygiene ──────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+        exclude: "frontend/(tsconfig\\.json|tsconfig\\.app\\.json|tsconfig\\.node\\.json|package-lock\\.json)"
+      - id: check-merge-conflict
+
+  # ── Python: ruff (lint + format) ──────────────────────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.9
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # ── Frontend: eslint (lint + fix) ─────────────────────────────
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint
+        entry: bash -c 'cd frontend && npx eslint --fix'
+        language: system
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: false
+
+  # ── Frontend: prettier (format) ───────────────────────────────
+  - repo: local
+    hooks:
+      - id: prettier
+        name: prettier
+        entry: bash -c 'cd frontend && npx prettier --write .'
+        language: system
+        files: ^frontend/
+        pass_filenames: false
+
+  # ── Type-error gates (stages: push only per ADR 0026) ──────────
+  - repo: local
+    hooks:
+      - id: mypy-strict
+        name: mypy --strict (backend)
+        entry: uv run --project backend mypy --strict app
+        language: system
+        files: ^backend/.*\.py$
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: tsc-noemit
+        name: tsc --noEmit (frontend)
+        entry: bash -c 'cd frontend && npx tsc --noEmit'
+        language: system
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: false
+        stages: [pre-push]
