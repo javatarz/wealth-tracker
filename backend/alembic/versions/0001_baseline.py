@@ -7,8 +7,6 @@ Create Date: 2026-09-26
 
 from collections.abc import Sequence
 
-from alembic import op
-
 # revision identifiers, used by Alembic.
 revision: str = "0001"
 down_revision: str | None = None

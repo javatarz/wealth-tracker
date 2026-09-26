@@ -17,9 +17,10 @@ def _export_openapi(output: Path) -> None:
     """Generate the OpenAPI spec and write it to *output*."""
     from app.main import app
 
-    spec = app.openapi()
+    spec_dict: object = app.openapi()
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(spec, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    payload: str = json.dumps(spec_dict, indent=2, sort_keys=True) + "\n"
+    output.write_text(payload, encoding="utf-8")
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -35,8 +36,11 @@ def main(argv: list[str] | None = None) -> None:
     )
 
     args = parser.parse_args(argv)
-    if args.command == "export-openapi":
-        _export_openapi(args.output)
+    command: str = args.command
+    output: Path = args.output
+
+    if command == "export-openapi":
+        _export_openapi(output)
     else:
         parser.print_help()
         sys.exit(1)

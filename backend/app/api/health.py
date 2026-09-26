@@ -12,7 +12,7 @@ from app import __version__
 router = APIRouter(tags=["health"])
 
 
-class HealthResponse(BaseModel):
+class HealthResponse(BaseModel):  # type: ignore[explicit-any]  # pydantic BaseModel internals
     """Response shape for GET /health."""
 
     model_config = ConfigDict(strict=True)
@@ -22,7 +22,7 @@ class HealthResponse(BaseModel):
     schema_revision: str | None = None
 
 
-@router.get("/health", response_model=HealthResponse)
+@router.get("/health", response_model=HealthResponse)  # type: ignore[misc]
 def health() -> HealthResponse:
     """Return a health-check response.
 

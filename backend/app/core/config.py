@@ -9,7 +9,7 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class Settings(BaseSettings):
+class Settings(BaseSettings):  # type: ignore[explicit-any]  # pydantic BaseSettings internals
     """Wealth Tracker configuration loaded from env / .env file."""
 
     model_config = SettingsConfigDict(
@@ -41,7 +41,7 @@ class Settings(BaseSettings):
         return f"sqlite:///{self.data_dir.resolve()}/wealth.db"
 
 
-@lru_cache
+@lru_cache  # type: ignore[misc]  # decorated return type contains Any
 def get_settings() -> Settings:
     """Return a cached Settings instance so tests can override via env.
 

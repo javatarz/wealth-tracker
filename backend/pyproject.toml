@@ -21,6 +21,7 @@ dev = [
     "pre-commit>=4,<5",
     "openapi-core>=0.19,<1",
     "types-requests>=2,<3",
+    "aioitertools>=0.13.0",
 ]
 
 [tool.mypy]

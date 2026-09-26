@@ -17,11 +17,11 @@ _src = Path(__file__).resolve().parent.parent
 if str(_src) not in sys.path:
     sys.path.insert(0, str(_src))
 
-from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import engine_from_config, pool  # noqa: E402
 
-from app.core.config import get_settings
-from app.core.database import Base
+from alembic import context  # noqa: E402
+from app.core.config import get_settings  # noqa: E402
+from app.core.database import Base  # noqa: E402
 
 # Alembic Config object, which provides access to values within the
 # .ini file in use.
@@ -31,9 +31,12 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Override sqlalchemy.url from application settings.
-settings = get_settings()
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# Override sqlalchemy.url from application settings,
+# but only when the URL hasn't been explicitly set by the caller
+# (e.g. in tests or via -x sqlalchemy.url=...).
+if config.get_main_option("sqlalchemy.url") == "sqlite:///./data/wealth.db":
+    settings = get_settings()
+    config.set_main_option("sqlalchemy.url", settings.database_url)
 
 # Target metadata for autogenerate (when needed in future tickets).
 target_metadata = Base.metadata
