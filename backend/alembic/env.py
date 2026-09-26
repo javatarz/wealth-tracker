@@ -17,7 +17,7 @@ _src = Path(__file__).resolve().parent.parent
 if str(_src) not in sys.path:
     sys.path.insert(0, str(_src))
 
-from sqlalchemy import engine_from_config, pool  # noqa: E402
+from sqlalchemy import create_engine, pool  # noqa: E402
 
 from alembic import context  # noqa: E402
 from app.core.config import get_settings  # noqa: E402
@@ -62,11 +62,8 @@ def run_migrations_offline() -> None:
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode — create an Engine and associate
     a connection with the context."""
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    url = config.get_main_option("sqlalchemy.url")
+    connectable = create_engine(url, poolclass=pool.NullPool)
 
     with connectable.connect() as connection:
         context.configure(connection=connection, target_metadata=target_metadata)
