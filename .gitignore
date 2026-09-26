@@ -2,3 +2,33 @@
 __pycache__/
 *.pyc
 .DS_Store
+
+# Node
+node_modules/
+frontend/dist/
+
+# Data
+/data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Tool caches
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+coverage/
+
+# Env
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
