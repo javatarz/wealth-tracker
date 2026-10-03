@@ -46,7 +46,7 @@ non-Docker alternative.
 | `check` | lint + typecheck + test |
 | `db:migrate` | `uv run alembic upgrade head` |
 | `docker:build` | `docker compose build` |
-| `docker:up` | `docker compose up` |
+| `docker:up` | `docker compose up --build` |
 
 ## Configuration
 
@@ -57,6 +57,8 @@ in dev. Variables:
 - `PORT` (default 8000)
 - `LOG_LEVEL` (default `info`)
 - `CORS_ORIGINS` (default `http://localhost:5173` — Vite dev server)
+- `STATIC_DIR` (unset by default) — directory of the built frontend that uvicorn
+  serves at `/`; the Docker image sets it to the baked-in assets
 
 ## Consequences
 

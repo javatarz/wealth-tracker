@@ -1,0 +1,18 @@
+services:
+  app:
+    build: .
+    image: wealth-tracker:local
+    environment:
+      DATA_DIR: /data
+      PORT: ${PORT:-8000}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      # Loopback only. There is no authentication (ADR 0007), so publishing on
+      # 0.0.0.0 or behind a reverse proxy exposes all portfolio data (ADR 0019).
+      - "127.0.0.1:${PORT:-8000}:${PORT:-8000}"
+    volumes:
+      - data:/data
+    restart: unless-stopped
+
+volumes:
+  data:

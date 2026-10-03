@@ -95,3 +95,11 @@ run = [
   "mise run typecheck",
   "mise run test",
 ]
+
+[tasks."docker:build"]
+description = "Build the packaged Docker image"
+run = "docker compose build"
+
+[tasks."docker:up"]
+description = "Build and run the packaged app at http://localhost:${PORT:-8000}"
+run = "docker compose up --build"

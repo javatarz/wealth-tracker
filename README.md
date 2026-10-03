@@ -44,13 +44,32 @@ mise run db:migrate # alembic upgrade head
 
 Open http://localhost:5173 — the page shows the backend's `/api/health` status.
 
-Docker packaging (`mise run docker:up`) is planned per the ADRs but not yet in place.
-
 Configure via environment variables (see [ADR 0018](docs/adr/0018-repo-layout-api-contract-and-packaging.md)).
+
+## Docker
+
+Requires Docker with the Compose plugin. No Python or Node install needed.
+
+```bash
+docker compose up --build   # or: mise run docker:up
+```
+
+Open http://localhost:8000. One container serves both the API and the compiled frontend, and runs `alembic upgrade head` before starting.
+
+- **Data** lives in the `data` named volume, mounted at `/data` (SQLite at `/data/wealth.db`). It survives `docker compose down` and image rebuilds; `docker compose down -v` deletes it.
+- **Config** via environment variables, e.g. `PORT=9000 LOG_LEVEL=debug docker compose up`:
+
+  | Variable | Default | Purpose |
+  |----------|---------|---------|
+  | `PORT` | `8000` | Port uvicorn listens on, published on the host |
+  | `LOG_LEVEL` | `info` | `critical`, `error`, `warning`, `info` or `debug` |
+  | `DATA_DIR` | `/data` | SQLite location inside the container |
+
+> **Security:** the app has no authentication ([ADR 0007](docs/adr/0007-no-authentication.md)). `docker-compose.yml` publishes the port on `127.0.0.1` only. Binding it to `0.0.0.0`, or putting it behind a reverse proxy without authentication, exposes all portfolio data to anyone who can reach it ([ADR 0019](docs/adr/0019-privacy-and-security-posture.md)).
 
 ## What's Runnable Today
 
-- The app skeleton via `mise run dev` (see Quick Start)
+- The app skeleton via `mise run dev` (see Quick Start) or `docker compose up --build` (see Docker)
 - `python scripts/generate_mock_cams_pdf.py [output.pdf]` — generates a synthetic CAMS CAS PDF for testing
 - Open `prototypes/cams-import/index.html` and `prototypes/screens-nav/index.html` in a browser to explore the UI design concepts
 

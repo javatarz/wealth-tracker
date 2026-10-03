@@ -13,3 +13,17 @@ jobs:
       - run: mise run install
       - run: pre-commit run --all-files --show-diff-on-failure
       - run: mise run check
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: docker compose up --build --detach --wait
+      - name: Smoke test frontend and API from the container
+        run: |
+          curl --fail --silent http://127.0.0.1:8000/ | grep -q '<title>Wealth Tracker</title>'
+          curl --fail --silent http://127.0.0.1:8000/api/health | grep -q '"status":"ok"'
+      - if: failure()
+        run: docker compose logs
+      - if: always()
+        run: docker compose down --volumes
