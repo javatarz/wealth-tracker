@@ -22,12 +22,15 @@ dev = [
     "mypy>=2.4.0",
     "pypdf>=6.19.0",
     "pytest>=9.1.1",
+    "pytest-xdist>=3.6.1",
+    "pytest-cov>=4.1.0",
     "ruff>=0.16.10",
 ]
 
 [tool.ruff]
 target-version = "py313"
 line-length = 100
+cache-dir = ".ruff_cache"
 
 [tool.ruff.lint]
 # Design rules (ADR 0028): small functions, one level of nesting, few arguments,
@@ -62,7 +65,11 @@ known-third-party = ["alembic"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra --strict-markers"
+addopts = "-ra --strict-markers -n auto --cov=app --cov-report=term-missing --cov-fail-under=80"
+markers = [
+    "unit: Fast unit tests that don't require external dependencies",
+    "integration: Slower tests that may require external services or complex setup",
+]
 
 [tool.mypy]
 python_version = "3.13"
@@ -73,6 +80,11 @@ disallow_any_explicit = true
 warn_unreachable = true
 exclude = ["^\\.venv/"]
 mypy_path = "stubs"
+
+# Performance optimizations
+incremental = true
+cache_dir = ".mypy_cache"
+sqlite_cache = true
 
 # Test clients and assertions on response bodies are inherently Any-typed.
 [[tool.mypy.overrides]]

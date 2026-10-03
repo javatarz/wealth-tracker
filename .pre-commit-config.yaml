@@ -35,6 +35,7 @@ repos:
         language: system
         files: ^backend/.*\.py$
         pass_filenames: false
+        require_serial: true
       - id: calisthenics
         name: no else, no if ladders (Object Calisthenics)
         entry: mise run lint:calisthenics
