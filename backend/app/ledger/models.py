@@ -160,3 +160,25 @@ class Lot(Base):
         self.remaining_units -= taken
         self.remaining_cost -= released
         return units - taken
+
+
+class ReconciliationDecision(Base):
+    """How the user resolved a statement whose closing units disagreed with the ledger (ADR 0027).
+
+    A record of the decision only; it never feeds financial maths.
+    """
+
+    __tablename__ = "reconciliation_decisions"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    import_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("imports.id"), index=True)
+    position_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("positions.id"), index=True)
+    scheme: Mapped[str] = mapped_column(String(255))
+    holding: Mapped[str] = mapped_column(String(255))
+    action: Mapped[str] = mapped_column(String(16))
+    statement_units: Mapped[Decimal] = mapped_column(DecimalText())
+    derived_units: Mapped[Decimal] = mapped_column(DecimalText())
+    delta: Mapped[Decimal] = mapped_column(DecimalText())
+    cost_basis: Mapped[Decimal | None] = mapped_column(DecimalText())
+    parser_version: Mapped[str] = mapped_column(String(32))
+    decided_at: Mapped[datetime]

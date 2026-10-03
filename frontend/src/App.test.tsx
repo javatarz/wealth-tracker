@@ -62,7 +62,8 @@ describe("App", () => {
       "POST /api/statements/preview": () => respond(200, preview),
       "POST /api/imports": () => {
         committed = true;
-        return respond(201, {
+        return respond(200, {
+          outcome: "committed",
           import_id: position.id,
           positions: 1,
           transactions: 7,

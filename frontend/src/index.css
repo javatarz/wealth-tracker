@@ -225,3 +225,33 @@ td.num {
 .commit-bar .callout {
   margin: 0;
 }
+
+.mismatches {
+  margin: 1rem 0;
+}
+
+.mismatch {
+  margin: 0.75rem 0;
+}
+
+.mismatch-units {
+  display: grid;
+  grid-template-columns: max-content max-content;
+  gap: 0.25rem 1rem;
+}
+
+.mismatch-units dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.mismatch-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.mismatch-actions .btn[aria-pressed="true"] {
+  outline: 2px solid currentColor;
+  font-weight: 600;
+}

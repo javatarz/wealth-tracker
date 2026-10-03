@@ -1,12 +1,6 @@
-import { useState } from "react";
-
-import { commitImport } from "./commitImport";
+import { MismatchCards } from "./MismatchCards";
 import type { Upload } from "./upload";
-
-type CommitState =
-  | { kind: "idle" }
-  | { kind: "committing" }
-  | { kind: "failed"; message: string };
+import { useCommit } from "./useCommit";
 
 interface CommitImportProps {
   upload: Upload;
@@ -14,36 +8,37 @@ interface CommitImportProps {
 }
 
 export function CommitImport({ upload, onCommitted }: CommitImportProps) {
-  const [state, setState] = useState<CommitState>({ kind: "idle" });
-  const committing = state.kind === "committing";
-
-  async function commit() {
-    setState({ kind: "committing" });
-    const result = await commitImport(upload);
-    if (result.kind === "error") {
-      setState({ kind: "failed", message: result.message });
-      return;
-    }
-    onCommitted();
-  }
+  const { status, mismatches, decisions, ready, commit, decide } = useCommit(
+    upload,
+    onCommitted,
+  );
 
   return (
-    <div className="commit-bar">
-      <button
-        type="button"
-        className="btn btn-primary"
-        disabled={committing}
-        onClick={() => {
-          void commit();
-        }}
-      >
-        {committing ? "Committing…" : "Commit import"}
-      </button>
-      {state.kind === "failed" && (
-        <p role="alert" className="callout bad">
-          {state.message}
-        </p>
+    <>
+      {mismatches.length > 0 && (
+        <MismatchCards
+          mismatches={mismatches}
+          decisions={decisions}
+          onDecide={decide}
+        />
       )}
-    </div>
+      <div className="commit-bar">
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={!ready}
+          onClick={() => {
+            void commit();
+          }}
+        >
+          {status.kind === "committing" ? "Committing…" : "Commit import"}
+        </button>
+        {status.kind === "failed" && (
+          <p role="alert" className="callout bad">
+            {status.message}
+          </p>
+        )}
+      </div>
+    </>
   );
 }

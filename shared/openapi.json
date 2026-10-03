@@ -1,8 +1,36 @@
 {
   "components": {
     "schemas": {
+      "Action": {
+        "enum": [
+          "trust_ledger",
+          "trust_statement",
+          "leave_out"
+        ],
+        "title": "Action",
+        "type": "string"
+      },
       "Body_commitImport": {
         "properties": {
+          "decisions": {
+            "anyOf": [
+              {
+                "contentMediaType": "application/json",
+                "contentSchema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/Action"
+                  },
+                  "type": "object"
+                },
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "JSON object mapping each mismatch's holding to an Action",
+            "title": "Decisions"
+          },
           "file": {
             "contentMediaType": "application/octet-stream",
             "description": "CAMS/KFintech consolidated account statement",
@@ -39,6 +67,29 @@
           "file"
         ],
         "title": "Body_previewStatement",
+        "type": "object"
+      },
+      "DecisionsRequired": {
+        "description": "Nothing was saved. Commit again with an Action for every mismatch.",
+        "properties": {
+          "mismatches": {
+            "items": {
+              "$ref": "#/components/schemas/Mismatch"
+            },
+            "title": "Mismatches",
+            "type": "array"
+          },
+          "outcome": {
+            "const": "needs_decisions",
+            "title": "Outcome",
+            "type": "string"
+          }
+        },
+        "required": [
+          "outcome",
+          "mismatches"
+        ],
+        "title": "DecisionsRequired",
         "type": "object"
       },
       "Folio": {
@@ -101,6 +152,11 @@
             "title": "Import Id",
             "type": "string"
           },
+          "outcome": {
+            "const": "committed",
+            "title": "Outcome",
+            "type": "string"
+          },
           "positions": {
             "title": "Positions",
             "type": "integer"
@@ -111,11 +167,59 @@
           }
         },
         "required": [
+          "outcome",
           "import_id",
           "positions",
           "transactions"
         ],
         "title": "ImportReceipt",
+        "type": "object"
+      },
+      "Mismatch": {
+        "description": "A Scheme whose printed closing units differ from the units the ledger would derive.",
+        "properties": {
+          "delta": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Delta",
+            "type": "string"
+          },
+          "derived_units": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Derived Units",
+            "type": "string"
+          },
+          "folio": {
+            "title": "Folio",
+            "type": "string"
+          },
+          "holding": {
+            "title": "Holding",
+            "type": "string"
+          },
+          "institution": {
+            "title": "Institution",
+            "type": "string"
+          },
+          "printed_units": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Printed Units",
+            "type": "string"
+          },
+          "scheme": {
+            "title": "Scheme",
+            "type": "string"
+          }
+        },
+        "required": [
+          "holding",
+          "scheme",
+          "institution",
+          "folio",
+          "printed_units",
+          "derived_units",
+          "delta"
+        ],
+        "title": "Mismatch",
         "type": "object"
       },
       "ParserInfo": {
@@ -601,7 +705,7 @@
     },
     "/api/imports": {
       "post": {
-        "description": "Parse a statement PDF and add it to the ledger. The PDF itself is not kept.",
+        "description": "Parse a statement PDF and add it to the ledger. The PDF itself is not kept.\n\nIf any Scheme's closing units disagree with the ledger, nothing is saved and the\nmismatches come back; commit again with a decision for each (ADR 0027).",
         "operationId": "commitImport",
         "requestBody": {
           "content": {
@@ -614,11 +718,26 @@
           "required": true
         },
         "responses": {
-          "201": {
+          "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ImportReceipt"
+                  "discriminator": {
+                    "mapping": {
+                      "committed": "#/components/schemas/ImportReceipt",
+                      "needs_decisions": "#/components/schemas/DecisionsRequired"
+                    },
+                    "propertyName": "outcome"
+                  },
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ImportReceipt"
+                    },
+                    {
+                      "$ref": "#/components/schemas/DecisionsRequired"
+                    }
+                  ],
+                  "title": "Response Commitimport"
                 }
               }
             },

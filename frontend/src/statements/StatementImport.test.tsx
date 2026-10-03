@@ -275,7 +275,12 @@ describe("StatementImport", () => {
       .fn<typeof fetch>()
       .mockResolvedValueOnce(respond(200, preview))
       .mockResolvedValueOnce(
-        respond(201, { import_id: "x", positions: 1, transactions: 2 }),
+        respond(200, {
+          outcome: "committed",
+          import_id: "x",
+          positions: 1,
+          transactions: 2,
+        }),
       );
     vi.stubGlobal("fetch", fetchMock);
     const onCommitted = vi.fn();
@@ -323,5 +328,95 @@ describe("StatementImport", () => {
       screen.getByRole("heading", { name: "cas.pdf" }),
     ).toBeInTheDocument();
     expect(onCommitted).not.toHaveBeenCalled();
+  });
+
+  it("asks for a decision on every mismatch before committing", async () => {
+    const mismatch = (holding: string, delta: string) => ({
+      holding,
+      scheme: `${holding} Fund`,
+      institution: "HDFC Mutual Fund",
+      folio: "1234567890",
+      printed_units: "1840.270",
+      derived_units: "1830.270",
+      delta,
+    });
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(respond(200, preview))
+      .mockResolvedValueOnce(
+        respond(200, {
+          outcome: "needs_decisions",
+          mismatches: [mismatch("A", "10.000"), mismatch("B", "-5.000")],
+        }),
+      )
+      .mockResolvedValueOnce(
+        respond(200, {
+          outcome: "committed",
+          import_id: "x",
+          positions: 2,
+          transactions: 9,
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const onCommitted = vi.fn();
+    render(<StatementImport onCommitted={onCommitted} />);
+    await userEvent.upload(screen.getByLabelText("Choose file"), pdf());
+    const commit = await screen.findByRole("button", { name: "Commit import" });
+
+    await userEvent.click(commit);
+
+    const first = await screen.findByRole("article", { name: "A Fund" });
+    expect(first).toHaveTextContent("+10.000");
+    expect(commit).toBeDisabled();
+    expect(screen.getByText(/0 of 2 mismatches resolved/)).toBeInTheDocument();
+    await userEvent.click(
+      within(first).getByRole("button", { name: "Trust the statement" }),
+    );
+    expect(commit).toBeDisabled();
+    const second = screen.getByRole("article", { name: "B Fund" });
+    await userEvent.click(
+      within(second).getByRole("button", { name: "Leave this scheme out" }),
+    );
+    expect(screen.getByText(/2 of 2 mismatches resolved/)).toBeInTheDocument();
+    await userEvent.click(commit);
+
+    await vi.waitFor(() => {
+      expect(onCommitted).toHaveBeenCalledOnce();
+    });
+    const request = fetchMock.mock.calls[2]?.[0] as Request;
+    const form = await request.formData();
+    expect(JSON.parse(form.get("decisions") as string)).toEqual({
+      A: "trust_statement",
+      B: "leave_out",
+    });
+  });
+
+  it("commits a statement that reconciles without asking anything", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(respond(200, preview))
+      .mockResolvedValueOnce(
+        respond(200, {
+          outcome: "committed",
+          import_id: "x",
+          positions: 1,
+          transactions: 2,
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const onCommitted = vi.fn();
+    render(<StatementImport onCommitted={onCommitted} />);
+
+    await userEvent.upload(screen.getByLabelText("Choose file"), pdf());
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Commit import" }),
+    );
+
+    await vi.waitFor(() => {
+      expect(onCommitted).toHaveBeenCalledOnce();
+    });
+    expect(screen.queryByText(/mismatches resolved/)).not.toBeInTheDocument();
+    const request = fetchMock.mock.calls[1]?.[0] as Request;
+    expect((await request.formData()).has("decisions")).toBe(false);
   });
 });

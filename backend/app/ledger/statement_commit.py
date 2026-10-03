@@ -1,8 +1,7 @@
-"""Write a parsed statement into the ledger (ADR 0001, 0006, 0015)."""
+"""Write a parsed statement into the ledger (ADR 0001, 0006, 0015, 0027)."""
 
 import logging
 import uuid
-from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
@@ -16,7 +15,7 @@ from app.core.database import Base
 from app.core.statement_preview import Folio, Scheme, StatementPreview
 from app.core.statement_preview import Transaction as StatementTransaction
 from app.core.statement_rejection import StatementRejectedError
-from app.ledger.fingerprint import transaction_fingerprint
+from app.ledger.holdings import instrument_identity
 from app.ledger.models import (
     PAISE,
     ZERO,
@@ -25,8 +24,10 @@ from app.ledger.models import (
     Import,
     Instrument,
     Position,
+    ReconciliationDecision,
     Transaction,
 )
+from app.ledger.reconciliation import Action, Decisions, SchemePlan, period_date, plan_statement
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,14 @@ DEFAULT_MEMBER_NAME = "Me"
 FOLIO_ACCOUNT = "mf_folio"
 MUTUAL_FUND = "mutual_fund"
 OPENING_BALANCE = "OPENING_BALANCE"
-_PERIOD_FORMAT = "%d-%b-%Y"
+RECONCILIATION_ADJUSTMENT = "RECONCILIATION_ADJUSTMENT"
+
+
+@dataclass(frozen=True)
+class StatementCommit:
+    statement: StatementPreview
+    content_hash: str
+    decisions: Decisions
 
 
 @dataclass(frozen=True)
@@ -44,12 +52,20 @@ class CommittedImport:
     transactions: int
 
 
-def commit_atomically(
-    session: Session, statement: StatementPreview, content_hash: str
-) -> CommittedImport:
+@dataclass(frozen=True)
+class DecisionsNeeded:
+    """Nothing was written: every mismatch needs an Action first (ADR 0027)."""
+
+    mismatches: list[SchemePlan]
+
+
+CommitOutcome = CommittedImport | DecisionsNeeded
+
+
+def commit_atomically(session: Session, request: StatementCommit) -> CommitOutcome:
     """Commits the whole statement or, if anything fails, none of it."""
     try:
-        return _commit_in_transaction(session, statement, content_hash)
+        return _commit_in_transaction(session, request)
     except SQLAlchemyError as exc:
         logger.exception("Committing an import failed; it was rolled back")
         raise StatementRejectedError(
@@ -57,36 +73,32 @@ def commit_atomically(
         ) from exc
 
 
-def _commit_in_transaction(
-    session: Session, statement: StatementPreview, content_hash: str
-) -> CommittedImport:
+def _commit_in_transaction(session: Session, request: StatementCommit) -> CommitOutcome:
     with session.begin():
-        return commit_statement(session, statement, content_hash)
+        return commit_statement(session, request)
 
 
-def commit_statement(
-    session: Session, statement: StatementPreview, content_hash: str
-) -> CommittedImport:
+def commit_statement(session: Session, request: StatementCommit) -> CommitOutcome:
     """Adds the statement to the session. The caller owns the database transaction."""
-    _ensure_not_imported(session, content_hash)
-    batch = _new_import(statement, content_hash, _default_member(session))
-    session.add(batch)
-    writer = StatementWriter(session, batch)
-    for folio in statement.folios:
-        writer.write_folio(folio)
-    written = session.scalars(select(Transaction.id).where(Transaction.import_id == batch.id))
-    return CommittedImport(
-        import_id=batch.id,
-        positions=sum(len(folio.schemes) for folio in statement.folios),
-        transactions=len(written.all()),
-    )
+    plans = plan_statement(session, request.statement)
+    mismatches = [plan for plan in plans if plan.mismatched]
+    previous = _revisitable_import(session, request.content_hash, mismatches)
+    if any(plan.holding.key not in request.decisions for plan in mismatches):
+        return DecisionsNeeded(mismatches)
+    batch = previous or _added(session, _new_import(session, request))
+    return StatementWriter(session, batch, request.decisions).write(plans)
 
 
-def _ensure_not_imported(session: Session, content_hash: str) -> None:
-    if session.scalars(select(Import).where(Import.content_hash == content_hash)).first():
+def _revisitable_import(
+    session: Session, content_hash: str, mismatches: list[SchemePlan]
+) -> Import | None:
+    """Re-importing a statement is only useful to revisit its mismatches (ADR 0027)."""
+    previous = session.scalars(select(Import).where(Import.content_hash == content_hash)).first()
+    if previous and not mismatches:
         raise StatementRejectedError(
             "already_imported", "This statement has already been imported."
         )
+    return previous
 
 
 def _default_member(session: Session) -> HouseholdMember:
@@ -94,23 +106,20 @@ def _default_member(session: Session) -> HouseholdMember:
     return member or _added(session, HouseholdMember(id=uuid.uuid4(), name=DEFAULT_MEMBER_NAME))
 
 
-def _new_import(statement: StatementPreview, content_hash: str, member: HouseholdMember) -> Import:
+def _new_import(session: Session, request: StatementCommit) -> Import:
+    statement = request.statement
     period = statement.statement_period
     return Import(
         id=uuid.uuid4(),
-        household_member_id=member.id,
-        content_hash=content_hash,
+        household_member_id=_default_member(session).id,
+        content_hash=request.content_hash,
         source=statement.file_type,
         statement_type=statement.cas_type,
-        period_from=_period_date(period.from_),
-        period_to=_period_date(period.to),
+        period_from=period_date(period.from_),
+        period_to=period_date(period.to),
         parser_version=statement.parser.version,
         imported_at=datetime.now(UTC),
     )
-
-
-def _period_date(printed: str) -> date:
-    return datetime.strptime(printed, _PERIOD_FORMAT).replace(tzinfo=UTC).date()
 
 
 def _added[E: Base](session: Session, entity: E) -> E:
@@ -119,48 +128,71 @@ def _added[E: Base](session: Session, entity: E) -> E:
 
 
 class StatementWriter:
-    def __init__(self, session: Session, batch: Import) -> None:
+    def __init__(self, session: Session, batch: Import, decisions: Decisions) -> None:
         self._session = session
         self._batch = batch
+        self._decisions = decisions
+        self._positions = 0
+        self._transactions = 0
 
-    def write_folio(self, folio: Folio) -> None:
-        account = self._account(folio)
-        for scheme in folio.schemes:
-            self._write_scheme(account, scheme)
+    def write(self, plans: list[SchemePlan]) -> CommittedImport:
+        for plan in plans:
+            _WRITERS[self._action(plan)](self, plan)
+        return CommittedImport(self._batch.id, self._positions, self._transactions)
 
-    def _write_scheme(self, account: Account, scheme: Scheme) -> None:
-        position = self._position(account, self._instrument(scheme))
-        rows = sorted(scheme.transactions, key=_row_date)
-        self._seed_opening_balance(position, scheme)
-        occurrences: Counter[str] = Counter()
-        for row in rows:
-            self._write_row(position, row, occurrences)
+    def write_holding(self, plan: SchemePlan) -> Position:
+        position = self._position(plan.folio, plan.scheme)
+        self._seed_opening_balance(position, plan)
+        for row, fingerprint in plan.rows:
+            self._write_row(position, row, fingerprint)
+        self._positions += 1
+        return position
 
-    def _seed_opening_balance(self, position: Position, scheme: Scheme) -> None:
-        if position.transactions or scheme.open == ZERO:
+    def trust_ledger(self, plan: SchemePlan) -> None:
+        position = self.write_holding(plan)
+        self._decide(plan, position.id, None)
+
+    def trust_statement(self, plan: SchemePlan) -> None:
+        position = self.write_holding(plan)
+        cost = _adjustment_cost(position, plan)
+        self._book(self._adjustment(position, plan), cost)
+        self._decide(plan, position.id, cost if plan.delta > ZERO else None)
+
+    def leave_out(self, plan: SchemePlan) -> None:
+        self._decide(plan, plan.holding.position_id(self._session), None)
+
+    def _action(self, plan: SchemePlan) -> Action | None:
+        return self._decisions[plan.holding.key] if plan.mismatched else None
+
+    def _seed_opening_balance(self, position: Position, plan: SchemePlan) -> None:
+        if not plan.seeds_opening:
             return
-        self._record(
-            Transaction(
-                id=uuid.uuid4(),
-                position=position,
-                import_id=self._batch.id,
-                date=self._batch.period_from,
-                kind=OPENING_BALANCE,
-                description="Opening balance",
-                units=scheme.open,
-                amount=None,
-                nav=_opening_nav(scheme),
-                synthetic=True,
-                fingerprint=None,
-            )
+        opening = self._synthetic(position, OPENING_BALANCE, plan.scheme.open)
+        opening.nav = _opening_nav(plan.scheme)
+        self._record(opening)
+
+    def _adjustment(self, position: Position, plan: SchemePlan) -> Transaction:
+        adjustment = self._synthetic(position, RECONCILIATION_ADJUSTMENT, plan.delta)
+        adjustment.date = self._batch.period_to
+        adjustment.nav = plan.scheme.valuation.nav
+        return adjustment
+
+    def _synthetic(self, position: Position, kind: str, units: Decimal) -> Transaction:
+        return Transaction(
+            id=uuid.uuid4(),
+            position=position,
+            import_id=self._batch.id,
+            date=self._batch.period_from,
+            kind=kind,
+            description=kind.replace("_", " ").capitalize(),
+            units=units,
+            amount=None,
+            nav=None,
+            synthetic=True,
+            fingerprint=None,
         )
 
-    def _write_row(self, position: Position, row: StatementTransaction, seen: Counter[str]) -> None:
-        identical = transaction_fingerprint(position.ledger_key, row, 0)
-        seen[identical] += 1
-        fingerprint = transaction_fingerprint(position.ledger_key, row, seen[identical])
-        if self._known(fingerprint):
-            return
+    def _write_row(self, position: Position, row: StatementTransaction, fingerprint: str) -> None:
         self._record(
             Transaction(
                 id=uuid.uuid4(),
@@ -177,13 +209,33 @@ class StatementWriter:
             )
         )
 
-    def _record(self, transaction: Transaction) -> None:
-        self._session.add(transaction)
-        _LOT_EFFECTS[int(transaction.units.compare(ZERO))](transaction)
+    def _decide(
+        self, plan: SchemePlan, position_id: uuid.UUID | None, cost: Decimal | None
+    ) -> None:
+        self._session.add(
+            ReconciliationDecision(
+                id=uuid.uuid4(),
+                import_id=self._batch.id,
+                position_id=position_id,
+                scheme=plan.scheme.scheme,
+                holding=plan.holding.key,
+                action=self._decisions[plan.holding.key],
+                statement_units=plan.scheme.close,
+                derived_units=plan.derived_units,
+                delta=plan.delta,
+                cost_basis=cost,
+                parser_version=self._batch.parser_version,
+                decided_at=datetime.now(UTC),
+            )
+        )
 
-    def _known(self, fingerprint: str) -> bool:
-        query = select(Transaction.id).where(Transaction.fingerprint == fingerprint)
-        return self._session.scalar(query) is not None
+    def _record(self, transaction: Transaction) -> None:
+        self._book(transaction, _acquisition_cost(transaction))
+
+    def _book(self, transaction: Transaction, cost: Decimal) -> None:
+        self._session.add(transaction)
+        self._transactions += 1
+        _LOT_EFFECTS[int(transaction.units.compare(ZERO))](transaction, cost)
 
     def _account(self, folio: Folio) -> Account:
         member_id = self._batch.household_member_id
@@ -203,7 +255,7 @@ class StatementWriter:
         return self._session.scalars(query).first() or _added(self._session, account)
 
     def _instrument(self, scheme: Scheme) -> Instrument:
-        identity = _instrument_identity(scheme)
+        identity = instrument_identity(scheme)
         query = select(Instrument).where(
             Instrument.kind == MUTUAL_FUND, Instrument.identity == identity
         )
@@ -217,7 +269,9 @@ class StatementWriter:
         )
         return self._session.scalars(query).first() or _added(self._session, instrument)
 
-    def _position(self, account: Account, instrument: Instrument) -> Position:
+    def _position(self, folio: Folio, scheme: Scheme) -> Position:
+        account = self._account(folio)
+        instrument = self._instrument(scheme)
         query = select(Position).where(
             Position.account_id == account.id, Position.instrument_id == instrument.id
         )
@@ -225,9 +279,12 @@ class StatementWriter:
         return self._session.scalars(query).first() or _added(self._session, position)
 
 
-def _instrument_identity(scheme: Scheme) -> str:
-    """AMFI code identifies a scheme (ADR 0015); statements that omit it fall back."""
-    return scheme.amfi or scheme.isin or f"{scheme.rta}:{scheme.rta_code}"
+_WRITERS: dict[Action | None, Callable[[StatementWriter, SchemePlan], object]] = {
+    None: StatementWriter.write_holding,
+    Action.TRUST_LEDGER: StatementWriter.trust_ledger,
+    Action.TRUST_STATEMENT: StatementWriter.trust_statement,
+    Action.LEAVE_OUT: StatementWriter.leave_out,
+}
 
 
 def _opening_nav(scheme: Scheme) -> Decimal:
@@ -235,19 +292,27 @@ def _opening_nav(scheme: Scheme) -> Decimal:
     return next(navs, scheme.valuation.nav)
 
 
+def _adjustment_cost(position: Position, plan: SchemePlan) -> Decimal:
+    """The printed cost not yet in the ledger, else Δ at the closing NAV (ADR 0027)."""
+    valuation = plan.scheme.valuation
+    by_nav = (plan.delta * valuation.nav).quantize(PAISE)
+    gap = by_nav if valuation.cost is None else valuation.cost - position.cost_basis()
+    return gap if gap > ZERO else by_nav
+
+
 def _row_date(row: StatementTransaction) -> date:
     return row.date
 
 
-def _acquire(transaction: Transaction) -> None:
-    transaction.position.acquire(transaction, _acquisition_cost(transaction))
+def _acquire(transaction: Transaction, cost: Decimal) -> None:
+    transaction.position.acquire(transaction, cost)
 
 
-def _dispose(transaction: Transaction) -> None:
+def _dispose(transaction: Transaction, _cost: Decimal) -> None:
     transaction.position.dispose(-transaction.units)
 
 
-def _no_lot_effect(_transaction: Transaction) -> None:
+def _no_lot_effect(_transaction: Transaction, _cost: Decimal) -> None:
     return
 
 
@@ -256,7 +321,7 @@ def _acquisition_cost(transaction: Transaction) -> Decimal:
     return priced if transaction.amount is None else abs(transaction.amount)
 
 
-_LOT_EFFECTS: dict[int, Callable[[Transaction], None]] = {
+_LOT_EFFECTS: dict[int, Callable[[Transaction, Decimal], None]] = {
     1: _acquire,
     -1: _dispose,
     0: _no_lot_effect,
