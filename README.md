@@ -31,21 +31,26 @@ All per [ADR 0011](docs/adr/0011-stack.md) / [ADR 0012](docs/adr/0012-mise-and-d
 
 ## Quick Start
 
-> **Note:** The stack is still being scaffolded. These commands are planned per the ADRs — expect them to work once the initial project structure lands.
+Requires [`mise`](https://mise.jdx.dev/getting-started.html).
 
 ```bash
-mise install        # Install pinned Python, Node, uv, npm
-mise run install    # uv sync (backend/) + npm install (frontend/)
-mise run dev        # uvicorn (hot-reload) + Vite dev server
-mise run check      # lint + typecheck + test
+mise install        # Install pinned Python, Node, uv, pre-commit
+mise run install    # uv sync (backend/) + npm install (frontend/) + pre-commit install
+mise run dev        # uvicorn (hot-reload, :8000) + Vite dev server (:5173)
+mise run check      # OpenAPI drift + lint + typecheck + test (what CI runs)
+mise run openapi    # Regenerate shared/openapi.json and frontend API types
 mise run db:migrate # alembic upgrade head
-mise run docker:up  # docker compose up
 ```
+
+Open http://localhost:5173 — the page shows the backend's `/api/health` status.
+
+Docker packaging (`mise run docker:up`) is planned per the ADRs but not yet in place.
 
 Configure via environment variables (see [ADR 0018](docs/adr/0018-repo-layout-api-contract-and-packaging.md)).
 
 ## What's Runnable Today
 
+- The app skeleton via `mise run dev` (see Quick Start)
 - `python scripts/generate_mock_cams_pdf.py [output.pdf]` — generates a synthetic CAMS CAS PDF for testing
 - Open `prototypes/cams-import/index.html` and `prototypes/screens-nav/index.html` in a browser to explore the UI design concepts
 

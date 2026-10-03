@@ -23,10 +23,12 @@ index signatures with declared properties.
 coercion, so a string arriving where a number is expected fails at the boundary
 instead of propagating.
 
-**Pre-commit.** `pre-commit` runs the fast subset on every commit — `ruff`,
-`ruff-format`, `eslint`, `prettier`, and file-hygiene hooks. `mise run check`
-remains the full gate in CI. One config file covers both ecosystems; `husky`
-and `lint-staged` are not used.
+**Pre-commit.** `pre-commit` runs lint, format, and type checks on every
+commit — `ruff`, `ruff-format`, `mypy --strict`, `eslint`, `prettier`,
+`tsc --noEmit`, and file-hygiene hooks — so formatting and type errors are
+blocked before they reach a commit. Tests are not run in hooks. `mise run check`
+remains the full gate in CI, adding tests and OpenAPI drift. One config file
+covers both ecosystems; `husky` and `lint-staged` are not used.
 
 **Data access.** Queries go through the SQLAlchemy 2.0 ORM and Alembic
 migrations. Application code does not assemble SQL inline. Where the ORM cannot
@@ -52,5 +54,8 @@ express a query, the escape hatch lives in a named module under
 - Strict Pydantic models reject data that arrives as strings (form posts,
   URL params), so coercion becomes an explicit, tested step at the API
   boundary rather than an implicit one.
+- Type checks in pre-commit make commits slower (seconds, growing with the
+  codebase). Accepted: a type error caught at commit time is cheaper than one
+  caught in CI.
 - Raw-SQL escape hatches are a deliberate, discoverable directory, not a
   scattered pattern — a reviewer can grep one path.
