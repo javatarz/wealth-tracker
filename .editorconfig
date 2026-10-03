@@ -1,0 +1,25 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.py]
+indent_size = 4
+
+[Makefile]
+indent_style = tab
+
+# Prose: list continuations and licence text use their own alignment.
+[{*.md,LICENSE}]
+indent_size = unset
+indent_style = unset
+
+# Throwaway HTML prototypes align wrapped attributes and text by hand.
+[prototypes/**.html]
+indent_size = unset
+indent_style = unset
