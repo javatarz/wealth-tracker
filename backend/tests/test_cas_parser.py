@@ -5,7 +5,8 @@ from importlib.metadata import version
 import casparser
 import pytest
 
-from app.core.cas_parser import StatementParseError, parse_cas_pdf
+from app.core.cas_parser import StatementUpload, parse_cas_pdf
+from app.core.statement_preview import StatementParseError
 from tests.conftest import FIXTURES, MOCK_CAS_PASSWORD
 
 
@@ -22,7 +23,7 @@ def test_casparser_output_matches_golden_fixture() -> None:
 
 
 def test_parses_folios_schemes_and_transactions(mock_cas_pdf: bytes) -> None:
-    preview = parse_cas_pdf(mock_cas_pdf, "")
+    preview = parse_cas_pdf(StatementUpload(mock_cas_pdf, ""))
 
     assert preview.file_type == "CAMS"
     assert preview.cas_type == "DETAILED"
@@ -45,14 +46,14 @@ def test_parses_folios_schemes_and_transactions(mock_cas_pdf: bytes) -> None:
 
 
 def test_records_parser_version(mock_cas_pdf: bytes) -> None:
-    preview = parse_cas_pdf(mock_cas_pdf, "")
+    preview = parse_cas_pdf(StatementUpload(mock_cas_pdf, ""))
 
     assert preview.parser.name == "casparser"
     assert preview.parser.version == version("casparser")
 
 
 def test_drops_investor_contact_details_and_pan(mock_cas_pdf: bytes) -> None:
-    body = parse_cas_pdf(mock_cas_pdf, "").model_dump_json(by_alias=True)
+    body = parse_cas_pdf(StatementUpload(mock_cas_pdf, "")).model_dump_json(by_alias=True)
 
     for pii in ("JOHN DOE", "john.doe@example.com", "ABCDE1234F", "+919999999999"):
         assert pii not in body
@@ -64,7 +65,7 @@ def test_surfaces_parse_warnings(mock_cas_pdf: bytes, monkeypatch: pytest.Monkey
         casparser, "read_cas_pdf", lambda *_a, **_k: _casparser_json(parse_warnings=[warning])
     )
 
-    assert parse_cas_pdf(mock_cas_pdf, "").parse_warnings == [warning]
+    assert parse_cas_pdf(StatementUpload(mock_cas_pdf, "")).parse_warnings == [warning]
 
 
 @pytest.mark.parametrize(
@@ -75,13 +76,13 @@ def test_rejects_missing_or_wrong_password(
     encrypted_mock_cas_pdf: bytes, password: str, code: str
 ) -> None:
     with pytest.raises(StatementParseError) as exc:
-        parse_cas_pdf(encrypted_mock_cas_pdf, password)
+        parse_cas_pdf(StatementUpload(encrypted_mock_cas_pdf, password))
 
     assert exc.value.code == code
 
 
 def test_opens_encrypted_statement_with_password(encrypted_mock_cas_pdf: bytes) -> None:
-    preview = parse_cas_pdf(encrypted_mock_cas_pdf, MOCK_CAS_PASSWORD)
+    preview = parse_cas_pdf(StatementUpload(encrypted_mock_cas_pdf, MOCK_CAS_PASSWORD))
 
     assert len(preview.folios) == 3
 
@@ -89,21 +90,21 @@ def test_opens_encrypted_statement_with_password(encrypted_mock_cas_pdf: bytes) 
 @pytest.mark.parametrize("content", [b"", b"hello", b"PK\x03\x04zip"])
 def test_rejects_non_pdf(content: bytes) -> None:
     with pytest.raises(StatementParseError) as exc:
-        parse_cas_pdf(content, "")
+        parse_cas_pdf(StatementUpload(content, ""))
 
     assert exc.value.code == "not_a_pdf"
 
 
 def test_rejects_damaged_pdf() -> None:
     with pytest.raises(StatementParseError) as exc:
-        parse_cas_pdf(b"%PDF-1.7\nnot really a pdf", "")
+        parse_cas_pdf(StatementUpload(b"%PDF-1.7\nnot really a pdf", ""))
 
     assert exc.value.code == "not_a_pdf"
 
 
 def test_rejects_pdf_that_is_not_a_cas(blank_pdf: bytes) -> None:
     with pytest.raises(StatementParseError) as exc:
-        parse_cas_pdf(blank_pdf, "")
+        parse_cas_pdf(StatementUpload(blank_pdf, ""))
 
     assert exc.value.code == "unrecognised_statement"
     assert "Re-saved" in exc.value.message
@@ -115,7 +116,7 @@ def test_rejects_demat_statements(mock_cas_pdf: bytes, monkeypatch: pytest.Monke
     )
 
     with pytest.raises(StatementParseError) as exc:
-        parse_cas_pdf(mock_cas_pdf, "")
+        parse_cas_pdf(StatementUpload(mock_cas_pdf, ""))
 
     assert exc.value.code == "unsupported_statement"
 
@@ -129,7 +130,7 @@ def test_parser_crash_is_a_parse_failure(
     monkeypatch.setattr(casparser, "read_cas_pdf", crash)
 
     with pytest.raises(StatementParseError) as exc:
-        parse_cas_pdf(mock_cas_pdf, "")
+        parse_cas_pdf(StatementUpload(mock_cas_pdf, ""))
 
     assert exc.value.code == "parse_failed"
 
@@ -140,6 +141,6 @@ def test_unexpected_parser_output_is_a_parse_failure(
     monkeypatch.setattr(casparser, "read_cas_pdf", lambda *_a, **_k: _casparser_json(folios=None))
 
     with pytest.raises(StatementParseError) as exc:
-        parse_cas_pdf(mock_cas_pdf, "")
+        parse_cas_pdf(StatementUpload(mock_cas_pdf, ""))
 
     assert exc.value.code == "parse_failed"

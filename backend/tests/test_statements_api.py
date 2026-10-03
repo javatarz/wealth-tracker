@@ -2,6 +2,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api import statements
+from app.core.cas_parser import StatementUpload
+from app.core.statement_preview import StatementParseError, StatementPreview
 from app.main import app
 from tests.conftest import MOCK_CAS_PASSWORD
 
@@ -72,3 +74,20 @@ def test_preview_requires_a_file() -> None:
     response = client.post("/api/statements/preview")
 
     assert response.status_code == 422
+
+
+def test_preview_uses_the_injected_statement_reader() -> None:
+    def unreadable(_upload: StatementUpload) -> StatementPreview:
+        raise StatementParseError.unrecognised_statement()
+
+    app.dependency_overrides[statements.get_statement_reader] = lambda: unreadable
+    try:
+        response = client.post(
+            "/api/statements/preview",
+            files={"file": ("statement.pdf", b"%PDF-", "application/pdf")},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 400
+    assert response.json()["code"] == "unrecognised_statement"

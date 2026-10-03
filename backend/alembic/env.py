@@ -12,8 +12,7 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         render_as_batch=True,
     )
-    with context.begin_transaction():
-        context.run_migrations()
+    _run_in_transaction()
 
 
 def run_migrations_online() -> None:
@@ -23,11 +22,13 @@ def run_migrations_online() -> None:
             target_metadata=target_metadata,
             render_as_batch=True,
         )
-        with context.begin_transaction():
-            context.run_migrations()
+        _run_in_transaction()
 
 
-if context.is_offline_mode():
-    run_migrations_offline()
-else:
-    run_migrations_online()
+def _run_in_transaction() -> None:
+    with context.begin_transaction():
+        context.run_migrations()
+
+
+run_migrations = run_migrations_offline if context.is_offline_mode() else run_migrations_online
+run_migrations()

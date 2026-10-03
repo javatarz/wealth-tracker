@@ -1,16 +1,19 @@
 const indianGrouping = new Intl.NumberFormat("en-IN");
+const DECIMAL = /^([+-]?)(\d+)(?:\.(\d+))?$/;
+const MISSING = "—";
+const MINUS = "−";
 
 /** Formats a decimal string with Indian digit grouping, keeping every printed digit. */
 export function formatDecimal(value: string | null): string {
   if (value === null) {
-    return "—";
+    return MISSING;
   }
-  const match = /^([+-]?)(\d+)(?:\.(\d+))?$/.exec(value);
-  const integer = match?.[2];
-  if (match === null || integer === undefined) {
-    return value;
-  }
-  const sign = match[1] === "-" ? "−" : "";
-  const fraction = match[3] === undefined ? "" : `.${match[3]}`;
-  return `${sign}${indianGrouping.format(BigInt(integer))}${fraction}`;
+  const match = DECIMAL.exec(value);
+  return match ? groupDigits(match) : value;
+}
+
+function groupDigits([, sign, integer = "0", fraction]: RegExpExecArray) {
+  const signText = sign === "-" ? MINUS : "";
+  const fractionText = fraction === undefined ? "" : `.${fraction}`;
+  return `${signText}${indianGrouping.format(BigInt(integer))}${fractionText}`;
 }
