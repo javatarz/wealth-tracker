@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api import statements
+from app.api import statements, uploads
 from app.core.cas_parser import StatementUpload
 from app.core.statement_preview import StatementParseError, StatementPreview
 from app.main import app
@@ -63,7 +63,7 @@ def test_preview_reports_parse_errors_as_400(encrypted_mock_cas_pdf: bytes) -> N
 
 @pytest.mark.unit
 def test_preview_rejects_oversized_files(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(statements, "MAX_STATEMENT_BYTES", 10)
+    monkeypatch.setattr(uploads, "MAX_STATEMENT_BYTES", 10)
 
     response = client.post(
         "/api/statements/preview",

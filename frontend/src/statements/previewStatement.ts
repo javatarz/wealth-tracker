@@ -1,5 +1,6 @@
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { asForm, type Upload } from "./upload";
 
 export type StatementPreview = components["schemas"]["StatementPreview"];
 export type StatementErrorCode =
@@ -24,27 +25,17 @@ const UNREACHABLE: PreviewResult = {
 };
 
 export async function previewStatement(
-  file: File,
-  password: string,
+  statement: Upload,
 ): Promise<PreviewResult> {
   try {
-    return toResult(await upload(file, password));
+    return toResult(await upload(statement));
   } catch {
     return UNREACHABLE;
   }
 }
 
-function upload(file: File, password: string) {
-  return api.POST("/api/statements/preview", {
-    // openapi-typescript types binary uploads as string.
-    body: { file: file as unknown as string, password },
-    bodySerializer: (body) => {
-      const form = new FormData();
-      form.append("file", file);
-      form.append("password", body.password);
-      return form;
-    },
-  });
+function upload(statement: Upload) {
+  return api.POST("/api/statements/preview", asForm(statement));
 }
 
 function toResult(response: UploadResponse): PreviewResult {
