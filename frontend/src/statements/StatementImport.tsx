@@ -6,7 +6,7 @@ import { StatementPreview as PreviewView } from "./StatementPreview";
 type State =
   | { kind: "idle" }
   | { kind: "parsing"; file: File }
-  | { kind: "needsPassword"; file: File; message: string }
+  | { kind: "needsPassword"; file: File; message: string; retry: boolean }
   | { kind: "error"; message: string }
   | { kind: "preview"; file: File; preview: StatementPreview };
 
@@ -26,7 +26,12 @@ export function StatementImport() {
       result.code === "password_required" ||
       result.code === "incorrect_password"
     ) {
-      setState({ kind: "needsPassword", file, message: result.message });
+      setState({
+        kind: "needsPassword",
+        file,
+        message: result.message,
+        retry: result.code === "incorrect_password",
+      });
     } else {
       setState({ kind: "error", message: result.message });
     }
@@ -95,7 +100,7 @@ export function StatementImport() {
 
       {state.kind === "needsPassword" && (
         <form className="callout" onSubmit={onPasswordSubmit}>
-          <p role="alert">
+          <p role="alert" className={state.retry ? "bad-text" : undefined}>
             {state.message} Enter its password to open {state.file.name}.
           </p>
           <label>

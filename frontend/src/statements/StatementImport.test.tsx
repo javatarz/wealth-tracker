@@ -238,4 +238,35 @@ describe("StatementImport", () => {
     expect(await passwordSent(fetchMock, 0)).toBe("");
     expect(await passwordSent(fetchMock, 1)).toBe("ABCDE1234F");
   });
+
+  it("highlights an incorrect password and lets the user retry", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        respond(400, {
+          code: "password_required",
+          message: "This statement is password-protected.",
+        }),
+      )
+      .mockResolvedValueOnce(
+        respond(400, {
+          code: "incorrect_password",
+          message: "That password didn't open the statement.",
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    render(<StatementImport />);
+
+    await userEvent.upload(screen.getByLabelText("Choose file"), pdf());
+    expect(await screen.findByRole("alert")).not.toHaveClass("bad-text");
+
+    await userEvent.type(screen.getByLabelText("Statement password"), "nope");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Open statement" }),
+    );
+
+    const alert = await screen.findByText(/didn't open the statement/);
+    expect(alert).toHaveClass("bad-text");
+    expect(screen.getByLabelText("Statement password")).toHaveValue("");
+  });
 });
