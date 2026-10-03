@@ -27,9 +27,10 @@ instead of propagating.
 commit — `ruff`, `ruff-format`, `mypy --strict`, `eslint`, `prettier`,
 `tsc --noEmit`, file-hygiene hooks, and `editorconfig-checker` (enforcing
 `.editorconfig`: final newline, LF, 2-space indent except Python's 4) — so formatting and type errors are
-blocked before they reach a commit. Tests are not run in hooks. `mise run check`
-remains the full gate in CI, adding tests and OpenAPI drift. One config file
-covers both ecosystems; `husky` and `lint-staged` are not used.
+blocked before they reach a commit. A `pre-push` hook runs the tests and the
+OpenAPI drift check, so the CI safety net runs locally before anything leaves the
+machine. `mise run check` (drift, every hook, tests) remains the full gate in
+CI. One config file covers both ecosystems; `husky` and `lint-staged` are not used.
 
 **Data access.** Queries go through the SQLAlchemy 2.0 ORM and Alembic
 migrations. Application code does not assemble SQL inline. Where the ORM cannot
@@ -58,5 +59,7 @@ express a query, the escape hatch lives in a named module under
 - Type checks in pre-commit make commits slower (seconds, growing with the
   codebase). Accepted: a type error caught at commit time is cheaper than one
   caught in CI.
+- Tests on pre-push keep the suite under pressure to stay fast; a slow suite
+  shows up as a slow push.
 - Raw-SQL escape hatches are a deliberate, discoverable directory, not a
   scattered pattern — a reviewer can grep one path.

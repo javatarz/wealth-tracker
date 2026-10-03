@@ -1,14 +1,22 @@
+# Every developer command is a mise task. `mise tasks` lists them.
+
 [tools]
 python = "3.13"
 node = "22"
 uv = "0.12"
 "pipx:pre-commit" = "4.6"
 
+[tasks.setup]
+description = "One-time setup: toolchain, dependencies, git hooks and database"
+run = ["mise install", "mise run install", "mise run db:migrate"]
+
 [tasks."install:backend"]
+hide = true
 dir = "backend"
 run = "uv sync"
 
 [tasks."install:frontend"]
+hide = true
 dir = "frontend"
 run = "npm install"
 
@@ -18,48 +26,74 @@ depends = ["install:backend", "install:frontend"]
 run = "pre-commit install"
 
 [tasks."dev:backend"]
+hide = true
 dir = "backend"
+depends = ["db:migrate"]
 run = "uv run uvicorn app.main:app --reload --port ${PORT:-8000}"
 
 [tasks."dev:frontend"]
+hide = true
 dir = "frontend"
 run = "npm run dev"
 
 [tasks.dev]
-description = "Run uvicorn (hot-reload) and the Vite dev server concurrently"
+description = "Run the app with hot reload at http://localhost:5173 (API on :8000)"
 depends = ["dev:backend", "dev:frontend"]
 
 [tasks."lint:backend"]
+hide = true
 dir = "backend"
 run = ["uv run ruff check .", "uv run ruff format --check ."]
 
 [tasks."lint:frontend"]
+hide = true
 dir = "frontend"
 run = "npm run lint"
 
 [tasks.lint]
+description = "Lint and format-check backend and frontend"
 depends = ["lint:backend", "lint:frontend"]
 
+[tasks."format:backend"]
+hide = true
+dir = "backend"
+run = ["uv run ruff check --fix .", "uv run ruff format ."]
+
+[tasks."format:frontend"]
+hide = true
+dir = "frontend"
+run = ["npx eslint --fix .", "npm run format"]
+
+[tasks.format]
+description = "Auto-fix lint and formatting issues in backend and frontend"
+depends = ["format:backend", "format:frontend"]
+
 [tasks."typecheck:backend"]
+hide = true
 dir = "backend"
 run = "uv run mypy --strict ."
 
 [tasks."typecheck:frontend"]
+hide = true
 dir = "frontend"
 run = "npm run typecheck"
 
 [tasks.typecheck]
+description = "Type-check backend (mypy --strict) and frontend (tsc)"
 depends = ["typecheck:backend", "typecheck:frontend"]
 
 [tasks."test:backend"]
+hide = true
 dir = "backend"
 run = "uv run pytest"
 
 [tasks."test:frontend"]
+hide = true
 dir = "frontend"
 run = "npm test"
 
 [tasks.test]
+description = "Run backend (pytest) and frontend (Vitest) tests"
 depends = ["test:backend", "test:frontend"]
 
 [tasks.openapi]
@@ -83,23 +117,29 @@ if ! git diff --quiet -- $paths || [ -n "$untracked" ]; then
 fi
 """
 
+[tasks.hooks]
+description = "Run every pre-commit hook against all files"
+run = "pre-commit run --all-files --show-diff-on-failure"
+
 [tasks."db:migrate"]
+description = "Apply database migrations (alembic upgrade head)"
 dir = "backend"
 run = "uv run alembic upgrade head"
 
+[tasks."fixtures:cams"]
+description = "Regenerate the synthetic CAMS CAS PDF in tests/fixtures/"
+run = "uv run --no-project --with fpdf2 python scripts/generate_mock_cams_pdf.py tests/fixtures/mock_cams_cas.pdf"
+
 [tasks.check]
-description = "Full gate: OpenAPI drift, lint, typecheck, test"
-run = [
-  "mise run openapi:check",
-  "mise run lint",
-  "mise run typecheck",
-  "mise run test",
-]
+description = "Full gate, same as CI: OpenAPI drift, all hooks (lint, typecheck), tests"
+run = ["mise run openapi:check", "mise run hooks", "mise run test"]
 
 [tasks."docker:build"]
 description = "Build the packaged Docker image"
+alias = "build"
 run = "docker compose build"
 
 [tasks."docker:up"]
-description = "Build and run the packaged app at http://localhost:${PORT:-8000}"
+description = "Build and run the packaged app at http://localhost:8000 (or $PORT)"
+alias = "start"
 run = "docker compose up --build"

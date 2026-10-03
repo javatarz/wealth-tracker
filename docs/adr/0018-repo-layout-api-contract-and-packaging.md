@@ -36,17 +36,23 @@ non-Docker alternative.
 
 ## mise tasks
 
+Every developer command is a mise task, so contributors learn one entry point.
+
 | Task | Runs |
 |------|------|
-| `install` | `uv sync` in `backend/`, `npm install` in `frontend/` |
-| `dev` | uvicorn (hot-reload) + Vite dev server concurrently |
+| `setup` | `mise install`, `install`, `db:migrate` — the one-time, single-command setup |
+| `install` | `uv sync` in `backend/`, `npm install` in `frontend/`, `pre-commit install` (commit and push hooks) |
+| `dev` | `db:migrate`, then uvicorn (hot-reload) + Vite dev server concurrently |
 | `test` | `uv run pytest` in `backend/`, `npm test` in `frontend/` |
 | `lint` | `uv run ruff` in `backend/`, `npx eslint` in `frontend/` |
+| `format` | `ruff check --fix` + `ruff format` in `backend/`, `eslint --fix` + `prettier` in `frontend/` |
 | `typecheck` | `uv run mypy --strict` in `backend/`, `npx tsc --noEmit` in `frontend/` |
-| `check` | lint + typecheck + test |
+| `hooks` | `pre-commit run --all-files` |
+| `check` | OpenAPI drift + `hooks` + test (what CI runs) |
 | `db:migrate` | `uv run alembic upgrade head` |
-| `docker:build` | `docker compose build` |
-| `docker:up` | `docker compose up --build` |
+| `fixtures:cams` | regenerate `tests/fixtures/mock_cams_cas.pdf` |
+| `docker:build` (alias `build`) | `docker compose build` |
+| `docker:up` (alias `start`) | `docker compose up --build` |
 
 ## Configuration
 
@@ -62,8 +68,8 @@ in dev. Variables:
 
 ## Consequences
 
-- A new contributor runs `mise install` and `mise run dev`; everything works without
-  Docker if Python and Node are installed via mise.
+- A new contributor runs `mise run setup` and `mise run dev`; everything works without
+  Docker because mise installs Python and Node.
 - The OpenAPI spec is committed so `git diff` catches drift, but its primary audience
   is the codegen tool, not humans.
 - `uv run` prefixes every Python task because uv's venv is not implicitly on `$PATH`
