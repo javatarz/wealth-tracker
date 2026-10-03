@@ -25,7 +25,8 @@ instead of propagating.
 
 **Pre-commit.** `pre-commit` runs lint, format, and type checks on every
 commit — `ruff`, `ruff-format`, `mypy --strict`, `eslint`, `prettier`,
-`tsc --noEmit`, and file-hygiene hooks — so formatting and type errors are
+`tsc --noEmit`, file-hygiene hooks, and `editorconfig-checker` (enforcing
+`.editorconfig`: final newline, LF, 2-space indent except Python's 4) — so formatting and type errors are
 blocked before they reach a commit. Tests are not run in hooks. `mise run check`
 remains the full gate in CI, adding tests and OpenAPI drift. One config file
 covers both ecosystems; `husky` and `lint-staged` are not used.

@@ -11,4 +11,5 @@ jobs:
       - uses: actions/checkout@v5
       - uses: jdx/mise-action@v5
       - run: mise run install
+      - run: pre-commit run --all-files --show-diff-on-failure
       - run: mise run check
