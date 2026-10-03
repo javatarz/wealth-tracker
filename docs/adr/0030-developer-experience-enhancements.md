@@ -23,17 +23,22 @@ We will implement the following enhancements to improve Developer Experience:
 - Monitor and optimize test execution times regularly
 - Use test filtering and parallelization to maintain fast feedback
 
-### 2. Enhanced Local Development Environment
+### 2. Performance Monitoring
+- Added `scripts/monitor_performance.sh` script to track performance metrics over time
+- Added `mise run perf:monitor` task for easy performance monitoring
+- Script outputs current performance metrics and compares against targets
+
+### 3. Enhanced Local Development Environment
 - Ensure complete offline development capability
 - Document the offline development workflow clearly
 - Verify that all development tasks can be performed without internet connectivity
 
-### 3. Improved Onboarding Experience
+### 4. Improved Onboarding Experience
 - Create a comprehensive quick-start guide beyond the README
 - Add a CONTRIBUTING.md file with team-specific workflows
 - Document common development scenarios and troubleshooting steps
 
-### 4. Deterministic and Reproducible Builds
+### 5. Deterministic and Reproducible Builds
 - Continue using locked dependencies (uv.lock)
 - Add periodic checks for outdated or vulnerable dependencies
 - Document the dependency update process
@@ -42,6 +47,7 @@ We will implement the following enhancements to improve Developer Experience:
 
 ### Positive
 - Clear performance targets help maintain fast feedback loops
+- Automated monitoring ensures we maintain performance standards
 - Better offline development experience
 - More comprehensive documentation for team workflows
 - Enhanced monitoring of development tool performance
