@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     port: int = 8000
     log_level: LogLevel = "info"
     cors_origins: list[str] = ["http://localhost:5173"]
+    static_dir: Path | None = None
 
 
 @lru_cache  # type: ignore[misc]  # functools.lru_cache is typed with Any
