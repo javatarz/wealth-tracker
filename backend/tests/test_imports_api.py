@@ -61,7 +61,8 @@ def reads_as_mock_statement(mock_statement: StatementPreview) -> Iterator[Statem
 @pytest.fixture
 def reads_with_opening_balance(mock_statement: StatementPreview) -> Iterator[StatementPreview]:
     folio = mock_statement.folios[0]
-    scheme = folio.schemes[0].model_copy(update={"open": Decimal("100.000")})
+    first = folio.schemes[0]
+    scheme = first.model_copy(update={"open": Decimal("100.000"), "close": first.close + 100})
     held_before = folio.model_copy(update={"schemes": [scheme]})
     yield from reading_every_upload_as(mock_statement.model_copy(update={"folios": [held_before]}))
 
@@ -79,7 +80,7 @@ def test_commit_records_the_statement_in_the_ledger(
 ) -> None:
     receipt = commit(client, mock_cas_pdf)
 
-    assert receipt["status"] == 201
+    assert receipt["status"] == 200
     assert (receipt["positions"], receipt["transactions"]) == (3, 21)
     assert [count(db, model) for model in (HouseholdMember, Account, Instrument, Position)] == [
         1,
@@ -125,7 +126,7 @@ def test_overlapping_statement_skips_transactions_already_in_the_ledger(
 
     overlapping = commit(client, mock_cas_pdf + b"\n% a different file, the same rows")
 
-    assert (overlapping["status"], overlapping["transactions"]) == (201, 0)
+    assert (overlapping["status"], overlapping["transactions"]) == (200, 0)
     assert (count(db, Import), count(db, Transaction), count(db, Lot)) == (2, 21, 12)
 
 

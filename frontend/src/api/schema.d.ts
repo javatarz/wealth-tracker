@@ -33,6 +33,9 @@ export interface paths {
     /**
      * Commit Import
      * @description Parse a statement PDF and add it to the ledger. The PDF itself is not kept.
+     *
+     *     If any Scheme's closing units disagree with the ledger, nothing is saved and the
+     *     mismatches come back; commit again with a decision for each (ADR 0027).
      */
     post: operations["commitImport"];
     delete?: never;
@@ -82,8 +85,18 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /**
+     * Action
+     * @enum {string}
+     */
+    Action: "trust_ledger" | "trust_statement" | "leave_out";
     /** Body_commitImport */
     Body_commitImport: {
+      /**
+       * Decisions
+       * @description JSON object mapping each mismatch's holding to an Action
+       */
+      decisions?: string | null;
       /**
        * File
        * @description CAMS/KFintech consolidated account statement
@@ -107,6 +120,19 @@ export interface components {
        * @default
        */
       password: string;
+    };
+    /**
+     * DecisionsRequired
+     * @description Nothing was saved. Commit again with an Action for every mismatch.
+     */
+    DecisionsRequired: {
+      /** Mismatches */
+      mismatches: components["schemas"]["Mismatch"][];
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      outcome: "needs_decisions";
     };
     /** Folio */
     Folio: {
@@ -137,10 +163,35 @@ export interface components {
        * Format: uuid
        */
       import_id: string;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      outcome: "committed";
       /** Positions */
       positions: number;
       /** Transactions */
       transactions: number;
+    };
+    /**
+     * Mismatch
+     * @description A Scheme whose printed closing units differ from the units the ledger would derive.
+     */
+    Mismatch: {
+      /** Delta */
+      delta: string;
+      /** Derived Units */
+      derived_units: string;
+      /** Folio */
+      folio: string;
+      /** Holding */
+      holding: string;
+      /** Institution */
+      institution: string;
+      /** Printed Units */
+      printed_units: string;
+      /** Scheme */
+      scheme: string;
     };
     /** ParserInfo */
     ParserInfo: {
@@ -351,12 +402,14 @@ export interface operations {
     };
     responses: {
       /** @description Successful Response */
-      201: {
+      200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["ImportReceipt"];
+          "application/json":
+            | components["schemas"]["ImportReceipt"]
+            | components["schemas"]["DecisionsRequired"];
         };
       };
       /** @description Bad Request */
