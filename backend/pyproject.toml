@@ -30,13 +30,35 @@ target-version = "py313"
 line-length = 100
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "SIM", "RUF", "ANN", "S", "PT", "TID"]
+# Design rules (ADR 0028): small functions, one level of nesting, few arguments,
+# no flag arguments, no magic values, no else after return/raise.
+select = [
+  "E", "F", "W", "I", "N", "UP", "B", "A", "C4", "SIM", "RUF", "ANN", "S", "PT", "TID",
+  "C90", "PL", "RET", "FBT", "ERA", "ARG", "PIE",
+  "PLR1702", "PLR0914", "PLR0917",
+]
+preview = true
+explicit-preview-rules = true
+
+[tool.ruff.lint.mccabe]
+max-complexity = 4
+
+[tool.ruff.lint.pylint]
+max-args = 3
+max-positional-args = 3
+max-branches = 4
+max-returns = 3
+max-statements = 12
+max-locals = 7
+max-nested-blocks = 1
+max-bool-expr = 3
+max-public-methods = 7
 
 [tool.ruff.lint.isort]
 known-third-party = ["alembic"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101"]
+"tests/**" = ["S101", "PLR2004"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

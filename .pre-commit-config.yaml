@@ -35,6 +35,12 @@ repos:
         language: system
         files: ^backend/.*\.py$
         pass_filenames: false
+      - id: calisthenics
+        name: no else, no if ladders (Object Calisthenics)
+        entry: mise run lint:calisthenics
+        language: system
+        files: ^backend/.*\.py$
+        pass_filenames: false
       - id: eslint-prettier
         name: eslint + prettier
         entry: mise run lint:frontend

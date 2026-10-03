@@ -1,7 +1,10 @@
 from starlette.exceptions import HTTPException
 from starlette.responses import Response
 from starlette.staticfiles import StaticFiles
+from starlette.status import HTTP_404_NOT_FOUND
 from starlette.types import Scope
+
+INDEX_PAGE = "index.html"
 
 
 class SPAStaticFiles(StaticFiles):
@@ -12,9 +15,13 @@ class SPAStaticFiles(StaticFiles):
         try:
             return await super().get_response(path, scope)
         except HTTPException as exc:
-            if exc.status_code != 404 or not _is_client_route(path):
-                raise
-            return await super().get_response("index.html", scope)
+            _reraise_unless_client_route(exc, path)
+        return await super().get_response(INDEX_PAGE, scope)
+
+
+def _reraise_unless_client_route(exc: HTTPException, path: str) -> None:
+    if exc.status_code != HTTP_404_NOT_FOUND or not _is_client_route(path):
+        raise exc
 
 
 def _is_client_route(path: str) -> bool:

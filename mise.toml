@@ -31,7 +31,13 @@ depends = ["dev:backend", "dev:frontend"]
 
 [tasks."lint:backend"]
 dir = "backend"
+depends = ["lint:calisthenics"]
 run = ["uv run ruff check .", "uv run ruff format --check ."]
+
+[tasks."lint:calisthenics"]
+description = "Object Calisthenics checks ruff can't express: no else, no if ladders (ADR 0028)"
+dir = "backend"
+run = "uv run python scripts/check_calisthenics.py app tests alembic scripts"
 
 [tasks."lint:frontend"]
 dir = "frontend"
