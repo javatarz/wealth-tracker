@@ -42,7 +42,7 @@ mise run openapi    # Regenerate shared/openapi.json and frontend API types
 mise run db:migrate # alembic upgrade head
 ```
 
-Open http://localhost:5173 — the page shows the backend's `/api/health` status.
+Open http://localhost:5173 and drop a CAMS/KFintech CAS PDF (try `tests/fixtures/mock_cams_cas.pdf`) to preview its folios, schemes and transactions. Nothing is stored.
 
 Configure via environment variables (see [ADR 0018](docs/adr/0018-repo-layout-api-contract-and-packaging.md)).
 
