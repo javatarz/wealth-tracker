@@ -21,10 +21,57 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/statements/preview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Preview Statement
+     * @description Parse a statement PDF and return its contents. Nothing is stored.
+     */
+    post: operations["previewStatement"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** Body_previewStatement */
+    Body_previewStatement: {
+      /**
+       * File
+       * @description CAMS/KFintech consolidated account statement
+       */
+      file: string;
+      /**
+       * Password
+       * @default
+       */
+      password: string;
+    };
+    /** Folio */
+    Folio: {
+      /** Amc */
+      amc: string;
+      /** Folio */
+      folio: string;
+      /** Schemes */
+      schemes: components["schemas"]["Scheme"][];
+    };
+    /** HTTPValidationError */
+    HTTPValidationError: {
+      /** Detail */
+      detail?: components["schemas"]["ValidationError"][];
+    };
     /** HealthResponse */
     HealthResponse: {
       /**
@@ -32,6 +79,154 @@ export interface components {
        * @constant
        */
       status: "ok";
+    };
+    /** ParserInfo */
+    ParserInfo: {
+      /**
+       * Name
+       * @constant
+       */
+      name: "casparser";
+      /** Version */
+      version: string;
+    };
+    /** Scheme */
+    Scheme: {
+      /** Advisor */
+      advisor: string | null;
+      /** Amfi */
+      amfi: string | null;
+      /** Close */
+      close: string;
+      /** Close Calculated */
+      close_calculated: string;
+      /** Isin */
+      isin: string | null;
+      /** Open */
+      open: string;
+      /** Rta */
+      rta: string;
+      /** Rta Code */
+      rta_code: string;
+      /** Scheme */
+      scheme: string;
+      /** Transactions */
+      transactions: components["schemas"]["Transaction"][];
+      /** Type */
+      type: string | null;
+      valuation: components["schemas"]["Valuation"];
+    };
+    /** StatementError */
+    StatementError: {
+      /** Code */
+      code:
+        | (
+            | "not_a_pdf"
+            | "password_required"
+            | "incorrect_password"
+            | "unrecognised_statement"
+            | "unsupported_statement"
+            | "parse_failed"
+          )
+        | "file_too_large";
+      /** Message */
+      message: string;
+    };
+    /** StatementPeriod */
+    StatementPeriod: {
+      /** From */
+      from: string;
+      /** To */
+      to: string;
+    };
+    /** StatementPreview */
+    StatementPreview: {
+      /**
+       * Cas Type
+       * @enum {string}
+       */
+      cas_type: "DETAILED" | "SUMMARY";
+      /**
+       * File Type
+       * @enum {string}
+       */
+      file_type: "CAMS" | "KFINTECH";
+      /** Folios */
+      folios: components["schemas"]["Folio"][];
+      /** Parse Warnings */
+      parse_warnings: string[];
+      parser: components["schemas"]["ParserInfo"];
+      statement_period: components["schemas"]["StatementPeriod"];
+    };
+    /** Transaction */
+    Transaction: {
+      /** Amount */
+      amount: string | null;
+      /** Balance */
+      balance: string | null;
+      /**
+       * Date
+       * Format: date
+       */
+      date: string;
+      /** Description */
+      description: string;
+      /** Dividend Rate */
+      dividend_rate: string | null;
+      /** Nav */
+      nav: string | null;
+      /**
+       * Type
+       * @enum {string}
+       */
+      type:
+        | "PURCHASE"
+        | "PURCHASE_SIP"
+        | "REDEMPTION"
+        | "DIVIDEND_PAYOUT"
+        | "DIVIDEND_REINVEST"
+        | "SWITCH_IN"
+        | "SWITCH_IN_MERGER"
+        | "SWITCH_OUT"
+        | "SWITCH_OUT_MERGER"
+        | "STT_TAX"
+        | "STAMP_DUTY_TAX"
+        | "TDS_TAX"
+        | "SEGREGATION"
+        | "GIFT_IN"
+        | "GIFT_OUT"
+        | "MISC"
+        | "UNKNOWN"
+        | "REVERSAL";
+      /** Units */
+      units: string | null;
+    };
+    /** ValidationError */
+    ValidationError: {
+      /** Context */
+      ctx?: Record<string, never>;
+      /** Input */
+      input?: unknown;
+      /** Location */
+      loc: (string | number)[];
+      /** Message */
+      msg: string;
+      /** Error Type */
+      type: string;
+    };
+    /** Valuation */
+    Valuation: {
+      /** Cost */
+      cost: string | null;
+      /**
+       * Date
+       * Format: date
+       */
+      date: string;
+      /** Nav */
+      nav: string;
+      /** Value */
+      value: string;
     };
   };
   responses: never;
@@ -58,6 +253,57 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HealthResponse"];
+        };
+      };
+    };
+  };
+  previewStatement: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_previewStatement"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StatementPreview"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StatementError"];
+        };
+      };
+      /** @description Content Too Large */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StatementError"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

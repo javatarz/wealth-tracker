@@ -1,6 +1,65 @@
 {
   "components": {
     "schemas": {
+      "Body_previewStatement": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "description": "CAMS/KFintech consolidated account statement",
+            "title": "File",
+            "type": "string"
+          },
+          "password": {
+            "default": "",
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_previewStatement",
+        "type": "object"
+      },
+      "Folio": {
+        "properties": {
+          "amc": {
+            "title": "Amc",
+            "type": "string"
+          },
+          "folio": {
+            "title": "Folio",
+            "type": "string"
+          },
+          "schemes": {
+            "items": {
+              "$ref": "#/components/schemas/Scheme"
+            },
+            "title": "Schemes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "folio",
+          "amc",
+          "schemes"
+        ],
+        "title": "Folio",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
       "HealthResponse": {
         "properties": {
           "status": {
@@ -13,6 +72,416 @@
           "status"
         ],
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "ParserInfo": {
+        "properties": {
+          "name": {
+            "const": "casparser",
+            "title": "Name",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "version"
+        ],
+        "title": "ParserInfo",
+        "type": "object"
+      },
+      "Scheme": {
+        "properties": {
+          "advisor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Advisor"
+          },
+          "amfi": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amfi"
+          },
+          "close": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Close",
+            "type": "string"
+          },
+          "close_calculated": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Close Calculated",
+            "type": "string"
+          },
+          "isin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isin"
+          },
+          "open": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Open",
+            "type": "string"
+          },
+          "rta": {
+            "title": "Rta",
+            "type": "string"
+          },
+          "rta_code": {
+            "title": "Rta Code",
+            "type": "string"
+          },
+          "scheme": {
+            "title": "Scheme",
+            "type": "string"
+          },
+          "transactions": {
+            "items": {
+              "$ref": "#/components/schemas/Transaction"
+            },
+            "title": "Transactions",
+            "type": "array"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          },
+          "valuation": {
+            "$ref": "#/components/schemas/Valuation"
+          }
+        },
+        "required": [
+          "scheme",
+          "isin",
+          "amfi",
+          "type",
+          "rta",
+          "rta_code",
+          "advisor",
+          "open",
+          "close",
+          "close_calculated",
+          "valuation",
+          "transactions"
+        ],
+        "title": "Scheme",
+        "type": "object"
+      },
+      "StatementError": {
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "enum": [
+                  "not_a_pdf",
+                  "password_required",
+                  "incorrect_password",
+                  "unrecognised_statement",
+                  "unsupported_statement",
+                  "parse_failed"
+                ],
+                "type": "string"
+              },
+              {
+                "const": "file_too_large",
+                "type": "string"
+              }
+            ],
+            "title": "Code"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "StatementError",
+        "type": "object"
+      },
+      "StatementPeriod": {
+        "properties": {
+          "from": {
+            "title": "From",
+            "type": "string"
+          },
+          "to": {
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ],
+        "title": "StatementPeriod",
+        "type": "object"
+      },
+      "StatementPreview": {
+        "properties": {
+          "cas_type": {
+            "enum": [
+              "DETAILED",
+              "SUMMARY"
+            ],
+            "title": "Cas Type",
+            "type": "string"
+          },
+          "file_type": {
+            "enum": [
+              "CAMS",
+              "KFINTECH"
+            ],
+            "title": "File Type",
+            "type": "string"
+          },
+          "folios": {
+            "items": {
+              "$ref": "#/components/schemas/Folio"
+            },
+            "title": "Folios",
+            "type": "array"
+          },
+          "parse_warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Parse Warnings",
+            "type": "array"
+          },
+          "parser": {
+            "$ref": "#/components/schemas/ParserInfo"
+          },
+          "statement_period": {
+            "$ref": "#/components/schemas/StatementPeriod"
+          }
+        },
+        "required": [
+          "statement_period",
+          "file_type",
+          "cas_type",
+          "folios",
+          "parse_warnings",
+          "parser"
+        ],
+        "title": "StatementPreview",
+        "type": "object"
+      },
+      "Transaction": {
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "balance": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Balance"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "dividend_rate": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dividend Rate"
+          },
+          "nav": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nav"
+          },
+          "type": {
+            "enum": [
+              "PURCHASE",
+              "PURCHASE_SIP",
+              "REDEMPTION",
+              "DIVIDEND_PAYOUT",
+              "DIVIDEND_REINVEST",
+              "SWITCH_IN",
+              "SWITCH_IN_MERGER",
+              "SWITCH_OUT",
+              "SWITCH_OUT_MERGER",
+              "STT_TAX",
+              "STAMP_DUTY_TAX",
+              "TDS_TAX",
+              "SEGREGATION",
+              "GIFT_IN",
+              "GIFT_OUT",
+              "MISC",
+              "UNKNOWN",
+              "REVERSAL"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "units": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Units"
+          }
+        },
+        "required": [
+          "date",
+          "description",
+          "type",
+          "amount",
+          "units",
+          "nav",
+          "balance",
+          "dividend_rate"
+        ],
+        "title": "Transaction",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "Valuation": {
+        "properties": {
+          "cost": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "nav": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Nav",
+            "type": "string"
+          },
+          "value": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "nav",
+          "cost",
+          "value"
+        ],
+        "title": "Valuation",
         "type": "object"
       }
     }
@@ -39,6 +508,65 @@
           }
         },
         "summary": "Get Health"
+      }
+    },
+    "/api/statements/preview": {
+      "post": {
+        "description": "Parse a statement PDF and return its contents. Nothing is stored.",
+        "operationId": "previewStatement",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_previewStatement"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementError"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementError"
+                }
+              }
+            },
+            "description": "Content Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview Statement"
       }
     }
   }

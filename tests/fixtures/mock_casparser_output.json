@@ -1,0 +1,347 @@
+{
+  "statement_period": {
+    "from": "01-Apr-2024",
+    "to": "31-Mar-2025"
+  },
+  "folios": [
+    {
+      "folio": "1234567890",
+      "amc": "HDFC Mutual Fund",
+      "name": "JOHN DOE",
+      "PAN": "ABCDE1234F",
+      "KYC": null,
+      "PANKYC": null,
+      "schemes": [
+        {
+          "scheme": "HDFC Top 200 Fund - Direct Plan - Growth",
+          "advisor": null,
+          "rta_code": "HGFG",
+          "rta": "CAMS",
+          "type": "EQUITY",
+          "isin": "INF179KA1RQ7",
+          "amfi": "130498",
+          "nominees": [
+            "PRIMARY NOMINEE"
+          ],
+          "open": "0",
+          "close": "1830.270",
+          "close_calculated": "1830.270",
+          "valuation": {
+            "date": "2025-03-31",
+            "nav": "70.7416",
+            "cost": null,
+            "value": "129476.23"
+          },
+          "transactions": [
+            {
+              "date": "2024-04-02",
+              "description": "Purchase",
+              "amount": "-76739.54",
+              "units": "1136.067",
+              "nav": "67.5484",
+              "balance": "1136.067",
+              "type": "PURCHASE",
+              "dividend_rate": null,
+              "gift_folio": null
+            },
+            {
+              "date": "2024-05-17",
+              "description": "Purchase",
+              "amount": "-35451.48",
+              "units": "458.754",
+              "nav": "77.2778",
+              "balance": "1594.821",
+              "type": "PURCHASE",
+              "dividend_rate": null,
+              "gift_folio": null
+            },
+            {
+              "date": "2024-08-12",
+              "description": "Purchase",
+              "amount": "-6430.22",
+              "units": "86.476",
+              "nav": "74.3583",
+              "balance": "1681.297",
+              "type": "PURCHASE",
+              "dividend_rate": null,
+              "gift_folio": null
+            },
+            {
+              "date": "2024-09-16",
+              "description": "Purchase",
+              "amount": "-6194.12",
+              "units": "85.253",
+              "nav": "72.6555",
+              "balance": "1766.550",
+              "type": "PURCHASE",
+              "dividend_rate": null,
+              "gift_folio": null
+            },
+            {
+              "date": "2024-10-28",
+              "description": "Redemption",
+              "amount": "267.78",
+              "units": "-3.497",
+              "nav": "76.5749",
+              "balance": "1763.053",
+              "type": "REDEMPTION",
+              "dividend_rate": null,
+              "gift_folio": null
+            },
+            {
+              "date": "2024-12-25",
+              "description": "Purchase",
+              "amount": "-5292.44",
+              "units": "67.217",
+              "nav": "78.7370",
+              "balance": "1830.270",
+              "type": "PURCHASE",
+              "dividend_rate": null,
+              "gift_folio": null
+            },
+            {
+              "date": "2025-03-31",
+              "description": "(Adjustment)",
+              "amount": "0.00",
+              "units": "0.000",
+              "nav": "70.7416",
+              "balance": "1830.270",
+              "type": "UNKNOWN",
+              "dividend_rate": null,
+              "gift_folio": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "folio": "1234567890",
+      "amc": "ICICI Prudential Mutual Fund",
+      "name": "JOHN DOE",
+      "PAN": "ABCDE1234F",
+      "KYC": null,
+      "PANKYC": null,
+      "schemes": [
+        {
+          "scheme": "ICICI Prudential Value Discovery Fund - Direct - Growth",
+          "advisor": null,
+          "rta_code": "ICPG",
+          "rta": "CAMS",
+          "type": "N/A",
+          "isin": null,
+          "amfi": null,
+          "nominees": [
+            "PRIMARY NOMINEE"
+          ],
+          "open": "0",
+          "close": "3260.204",
+          "close_calculated": "3260.204",
+          "valuation": {
+            "date": "2025-03-31",
+            "nav": "57.6963",
+            "cost": null,
+            "value": "188101.71"
+          },
+          "transactions": [
+            {
+              "date": "2024-04-05",
+              "description": "Purchase",
+              "amount": "-63949.52",
+              "units": "1379.471",
+              "nav": "46.3580",
+              "balance": "1379.471",
+              "type": "PURCHASE",
+              "dividend_rate": null,
+              "gift_folio": null
+            },
+            {
+              "date": "2024-05-19",
+              "description": "Purchase",
+              "amount": "-16301.80",
+              "units": "288.244",
+              "nav": "56.5555",
+              "balance": "1667.715",
+              "type": "PURCHASE",
+              "dividend_rate": null,
+              "gift_folio": null
+            },
+            {
+              "date": "2024-07-12",
+              "description": "Purchase",
+              "amount": "-9042.63",
+              "units": "163.319",
+              "nav": "55.3678",
+              "balance": "1831.034",
+              "type": "PURCHASE",
+              "dividend_rate": null,
+              "gift_folio": null
+            },
+            {
+              "date": "2024-09-19",
+              "description": "Purchase",
+              "amount": "-32594.72",
+              "units": "654.633",
+              "nav": "49.7908",
+              "balance": "2485.667",
+              "type": "PURCHASE",
+              "dividend_rate": null,
+              "gift_folio": null
+            },
+            {
+              "date": "2024-11-01",
+              "description": "Redemption",
+              "amount": "428.95",
+              "units": "-7.509",
+              "nav": "57.1243",
+              "balance": "2478.158",
+              "type": "REDEMPTION",
+              "dividend_rate": null,
+              "gift_folio": null
+            },
+            {
+              "date": "2025-01-25",
+              "description": "Purchase",
+              "amount": "-34725.56",
+              "units": "782.046",
+              "nav": "44.4035",
+              "balance": "3260.204",
+              "type": "PURCHASE",
+              "dividend_rate": null,
+              "gift_folio": null
+            },
+            {
+              "date": "2025-03-31",
+              "description": "(Adjustment)",
+              "amount": "0.00",
+              "units": "0.000",
+              "nav": "57.6963",
+              "balance": "3260.204",
+              "type": "UNKNOWN",
+              "dividend_rate": null,
+              "gift_folio": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "folio": "9876543210",
+      "amc": "SBI Mutual Fund",
+      "name": "JOHN DOE",
+      "PAN": "XYZPD1234K",
+      "KYC": null,
+      "PANKYC": null,
+      "schemes": [
+        {
+          "scheme": "SBI Equity Hybrid Fund - Direct Plan - Growth",
+          "advisor": null,
+          "rta_code": "SBEC",
+          "rta": "CAMS",
+          "type": "N/A",
+          "isin": null,
+          "amfi": null,
+          "nominees": [
+            "PRIMARY NOMINEE"
+          ],
+          "open": "0",
+          "close": "564.781",
+          "close_calculated": "564.781",
+          "valuation": {
+            "date": "2025-03-31",
+            "nav": "84.2666",
+            "cost": null,
+            "value": "47592.17"
+          },
+          "transactions": [
+            {
+              "date": "2024-04-07",
+              "description": "Purchase",
+              "amount": "-27758.29",
+              "units": "338.845",
+              "nav": "81.9204",
+              "balance": "338.845",
+              "type": "PURCHASE",
+              "dividend_rate": null,
+              "gift_folio": null
+            },
+            {
+              "date": "2024-05-19",
+              "description": "Redemption",
+              "amount": "213.34",
+              "units": "-2.693",
+              "nav": "79.2217",
+              "balance": "336.152",
+              "type": "REDEMPTION",
+              "dividend_rate": null,
+              "gift_folio": null
+            },
+            {
+              "date": "2024-07-23",
+              "description": "IDCW",
+              "amount": "8.23",
+              "units": "0.000",
+              "nav": "81.6766",
+              "balance": "336.152",
+              "type": "UNKNOWN",
+              "dividend_rate": null,
+              "gift_folio": null
+            },
+            {
+              "date": "2024-10-01",
+              "description": "Purchase",
+              "amount": "-17597.32",
+              "units": "228.629",
+              "nav": "76.9689",
+              "balance": "564.781",
+              "type": "PURCHASE",
+              "dividend_rate": null,
+              "gift_folio": null
+            },
+            {
+              "date": "2024-12-23",
+              "description": "IDCW",
+              "amount": "3.51",
+              "units": "0.000",
+              "nav": "80.3740",
+              "balance": "564.781",
+              "type": "UNKNOWN",
+              "dividend_rate": null,
+              "gift_folio": null
+            },
+            {
+              "date": "2025-02-23",
+              "description": "IDCW",
+              "amount": "6.67",
+              "units": "0.000",
+              "nav": "84.6915",
+              "balance": "564.781",
+              "type": "UNKNOWN",
+              "dividend_rate": null,
+              "gift_folio": null
+            },
+            {
+              "date": "2025-03-31",
+              "description": "(Adjustment)",
+              "amount": "0.00",
+              "units": "0.000",
+              "nav": "84.2666",
+              "balance": "564.781",
+              "type": "UNKNOWN",
+              "dividend_rate": null,
+              "gift_folio": null
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "investor_info": {
+    "name": "JOHN DOE",
+    "email": "john.doe@example.com",
+    "address": "123, MAIN STREET\nMUMBAI 400001",
+    "mobile": "+919999999999"
+  },
+  "cas_type": "DETAILED",
+  "file_type": "CAMS",
+  "parse_warnings": []
+}

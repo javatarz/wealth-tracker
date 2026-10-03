@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { api } from "./api/client";
+import { StatementImport } from "./statements/StatementImport";
 
 type Health =
   | { kind: "loading" }
@@ -28,11 +29,12 @@ export default function App() {
   return (
     <main>
       <h1>Wealth Tracker</h1>
-      <p>
+      <p className="muted small">
         API health: {health.kind === "loading" && <span>checking…</span>}
         {health.kind === "ok" && <span>{health.status}</span>}
         {health.kind === "error" && <span role="alert">{health.message}</span>}
       </p>
+      <StatementImport />
     </main>
   );
 }

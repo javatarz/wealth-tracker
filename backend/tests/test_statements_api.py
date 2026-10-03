@@ -1,0 +1,74 @@
+import pytest
+from fastapi.testclient import TestClient
+
+from app.api import statements
+from app.main import app
+from tests.conftest import MOCK_CAS_PASSWORD
+
+client = TestClient(app)
+
+
+def test_preview_returns_parsed_statement(mock_cas_pdf: bytes) -> None:
+    response = client.post(
+        "/api/statements/preview",
+        files={"file": ("statement.pdf", mock_cas_pdf, "application/pdf")},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["parser"]["name"] == "casparser"
+    assert body["statement_period"] == {"from": "01-Apr-2024", "to": "31-Mar-2025"}
+    assert len(body["folios"]) == 3
+    txn = body["folios"][0]["schemes"][0]["transactions"][0]
+    assert txn == {
+        "date": "2024-04-02",
+        "description": "Purchase",
+        "type": "PURCHASE",
+        "amount": "-76739.54",
+        "units": "1136.067",
+        "nav": "67.5484",
+        "balance": "1136.067",
+        "dividend_rate": None,
+    }
+    assert body["parse_warnings"] == []
+
+
+def test_preview_accepts_password(encrypted_mock_cas_pdf: bytes) -> None:
+    response = client.post(
+        "/api/statements/preview",
+        files={"file": ("statement.pdf", encrypted_mock_cas_pdf, "application/pdf")},
+        data={"password": MOCK_CAS_PASSWORD},
+    )
+
+    assert response.status_code == 200
+
+
+def test_preview_reports_parse_errors_as_400(encrypted_mock_cas_pdf: bytes) -> None:
+    response = client.post(
+        "/api/statements/preview",
+        files={"file": ("statement.pdf", encrypted_mock_cas_pdf, "application/pdf")},
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "code": "password_required",
+        "message": "This statement is password-protected.",
+    }
+
+
+def test_preview_rejects_oversized_files(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(statements, "MAX_STATEMENT_BYTES", 10)
+
+    response = client.post(
+        "/api/statements/preview",
+        files={"file": ("statement.pdf", b"%PDF-" + b"0" * 10, "application/pdf")},
+    )
+
+    assert response.status_code == 413
+    assert response.json()["code"] == "file_too_large"
+
+
+def test_preview_requires_a_file() -> None:
+    response = client.post("/api/statements/preview")
+
+    assert response.status_code == 422
