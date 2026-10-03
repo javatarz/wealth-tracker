@@ -12,6 +12,7 @@ jobs:
       - uses: jdx/mise-action@v5
       - run: mise run install
       - run: pre-commit run --all-files --show-diff-on-failure
+      - run: mise run typecheck:backend  # Use strict mypy in CI
       - run: mise run check
 
   docker:
