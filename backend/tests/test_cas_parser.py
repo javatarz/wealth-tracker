@@ -10,11 +10,13 @@ from app.core.statement_preview import StatementParseError
 from tests.conftest import FIXTURES, MOCK_CAS_PASSWORD
 
 
+@pytest.mark.unit
 def _casparser_json(**overrides: object) -> str:
     golden = json.loads((FIXTURES / "mock_casparser_output.json").read_text())
     return json.dumps(golden | overrides)
 
 
+@pytest.mark.unit
 def test_casparser_output_matches_golden_fixture() -> None:
     raw = casparser.read_cas_pdf(str(FIXTURES / "mock_cams_cas.pdf"), "", output="json")
 
@@ -22,6 +24,7 @@ def test_casparser_output_matches_golden_fixture() -> None:
     assert json.loads(raw) == golden
 
 
+@pytest.mark.unit
 def test_parses_folios_schemes_and_transactions(mock_cas_pdf: bytes) -> None:
     preview = parse_cas_pdf(StatementUpload(mock_cas_pdf, ""))
 
@@ -45,6 +48,7 @@ def test_parses_folios_schemes_and_transactions(mock_cas_pdf: bytes) -> None:
     assert preview.parse_warnings == []
 
 
+@pytest.mark.unit
 def test_records_parser_version(mock_cas_pdf: bytes) -> None:
     preview = parse_cas_pdf(StatementUpload(mock_cas_pdf, ""))
 
@@ -52,6 +56,7 @@ def test_records_parser_version(mock_cas_pdf: bytes) -> None:
     assert preview.parser.version == version("casparser")
 
 
+@pytest.mark.unit
 def test_drops_investor_contact_details_and_pan(mock_cas_pdf: bytes) -> None:
     body = parse_cas_pdf(StatementUpload(mock_cas_pdf, "")).model_dump_json(by_alias=True)
 
@@ -59,6 +64,7 @@ def test_drops_investor_contact_details_and_pan(mock_cas_pdf: bytes) -> None:
         assert pii not in body
 
 
+@pytest.mark.unit
 def test_surfaces_parse_warnings(mock_cas_pdf: bytes, monkeypatch: pytest.MonkeyPatch) -> None:
     warning = "Balance mismatch in HDFC Top 200 Fund on 2024-05-17"
     monkeypatch.setattr(
@@ -68,6 +74,7 @@ def test_surfaces_parse_warnings(mock_cas_pdf: bytes, monkeypatch: pytest.Monkey
     assert parse_cas_pdf(StatementUpload(mock_cas_pdf, "")).parse_warnings == [warning]
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("password", "code"),
     [("", "password_required"), ("wrong", "incorrect_password")],
@@ -81,12 +88,14 @@ def test_rejects_missing_or_wrong_password(
     assert exc.value.code == code
 
 
+@pytest.mark.unit
 def test_opens_encrypted_statement_with_password(encrypted_mock_cas_pdf: bytes) -> None:
     preview = parse_cas_pdf(StatementUpload(encrypted_mock_cas_pdf, MOCK_CAS_PASSWORD))
 
     assert len(preview.folios) == 3
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize("content", [b"", b"hello", b"PK\x03\x04zip"])
 def test_rejects_non_pdf(content: bytes) -> None:
     with pytest.raises(StatementParseError) as exc:
@@ -95,6 +104,7 @@ def test_rejects_non_pdf(content: bytes) -> None:
     assert exc.value.code == "not_a_pdf"
 
 
+@pytest.mark.unit
 def test_rejects_damaged_pdf() -> None:
     with pytest.raises(StatementParseError) as exc:
         parse_cas_pdf(StatementUpload(b"%PDF-1.7\nnot really a pdf", ""))
@@ -102,6 +112,7 @@ def test_rejects_damaged_pdf() -> None:
     assert exc.value.code == "not_a_pdf"
 
 
+@pytest.mark.unit
 def test_rejects_pdf_that_is_not_a_cas(blank_pdf: bytes) -> None:
     with pytest.raises(StatementParseError) as exc:
         parse_cas_pdf(StatementUpload(blank_pdf, ""))
@@ -110,6 +121,7 @@ def test_rejects_pdf_that_is_not_a_cas(blank_pdf: bytes) -> None:
     assert "Re-saved" in exc.value.message
 
 
+@pytest.mark.unit
 def test_rejects_demat_statements(mock_cas_pdf: bytes, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         casparser, "read_cas_pdf", lambda *_a, **_k: _casparser_json(file_type="NSDL")
@@ -121,6 +133,7 @@ def test_rejects_demat_statements(mock_cas_pdf: bytes, monkeypatch: pytest.Monke
     assert exc.value.code == "unsupported_statement"
 
 
+@pytest.mark.unit
 def test_parser_crash_is_a_parse_failure(
     mock_cas_pdf: bytes, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -135,6 +148,7 @@ def test_parser_crash_is_a_parse_failure(
     assert exc.value.code == "parse_failed"
 
 
+@pytest.mark.unit
 def test_unexpected_parser_output_is_a_parse_failure(
     mock_cas_pdf: bytes, monkeypatch: pytest.MonkeyPatch
 ) -> None:

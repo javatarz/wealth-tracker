@@ -10,6 +10,7 @@ from tests.conftest import MOCK_CAS_PASSWORD
 client = TestClient(app)
 
 
+@pytest.mark.unit
 def test_preview_returns_parsed_statement(mock_cas_pdf: bytes) -> None:
     response = client.post(
         "/api/statements/preview",
@@ -35,6 +36,7 @@ def test_preview_returns_parsed_statement(mock_cas_pdf: bytes) -> None:
     assert body["parse_warnings"] == []
 
 
+@pytest.mark.unit
 def test_preview_accepts_password(encrypted_mock_cas_pdf: bytes) -> None:
     response = client.post(
         "/api/statements/preview",
@@ -45,6 +47,7 @@ def test_preview_accepts_password(encrypted_mock_cas_pdf: bytes) -> None:
     assert response.status_code == 200
 
 
+@pytest.mark.unit
 def test_preview_reports_parse_errors_as_400(encrypted_mock_cas_pdf: bytes) -> None:
     response = client.post(
         "/api/statements/preview",
@@ -58,6 +61,7 @@ def test_preview_reports_parse_errors_as_400(encrypted_mock_cas_pdf: bytes) -> N
     }
 
 
+@pytest.mark.unit
 def test_preview_rejects_oversized_files(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(statements, "MAX_STATEMENT_BYTES", 10)
 
@@ -70,12 +74,14 @@ def test_preview_rejects_oversized_files(monkeypatch: pytest.MonkeyPatch) -> Non
     assert response.json()["code"] == "file_too_large"
 
 
+@pytest.mark.unit
 def test_preview_requires_a_file() -> None:
     response = client.post("/api/statements/preview")
 
     assert response.status_code == 422
 
 
+@pytest.mark.unit
 def test_preview_uses_the_injected_statement_reader() -> None:
     def unreadable(_upload: StatementUpload) -> StatementPreview:
         raise StatementParseError.unrecognised_statement()
