@@ -99,6 +99,10 @@ if ! git diff --quiet -- $paths || [ -n "$untracked" ]; then
 fi
 """
 
+[tasks."perf:monitor"]
+description = "Monitor development performance targets"
+run = "scripts/monitor_performance.sh"
+
 [tasks."db:migrate"]
 dir = "backend"
 run = "uv run alembic upgrade head"
