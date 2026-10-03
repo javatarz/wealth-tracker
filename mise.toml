@@ -61,6 +61,16 @@ depends = ["typecheck:backend", "typecheck:frontend"]
 dir = "backend"
 run = "uv run pytest"
 
+[tasks."test:unit"]
+description = "Run only fast unit tests"
+dir = "backend"
+run = "uv run pytest -m unit"
+
+[tasks."test:quick"]
+description = "Run tests with minimal output for quick feedback"
+dir = "backend"
+run = "uv run pytest --tb=no -q"
+
 [tasks."test:frontend"]
 dir = "frontend"
 run = "npm test"
