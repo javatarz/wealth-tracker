@@ -1,0 +1,97 @@
+[tools]
+python = "3.13"
+node = "22"
+uv = "0.12"
+"pipx:pre-commit" = "4.6"
+
+[tasks."install:backend"]
+dir = "backend"
+run = "uv sync"
+
+[tasks."install:frontend"]
+dir = "frontend"
+run = "npm install"
+
+[tasks.install]
+description = "Install backend and frontend dependencies and git hooks"
+depends = ["install:backend", "install:frontend"]
+run = "pre-commit install"
+
+[tasks."dev:backend"]
+dir = "backend"
+run = "uv run uvicorn app.main:app --reload --port ${PORT:-8000}"
+
+[tasks."dev:frontend"]
+dir = "frontend"
+run = "npm run dev"
+
+[tasks.dev]
+description = "Run uvicorn (hot-reload) and the Vite dev server concurrently"
+depends = ["dev:backend", "dev:frontend"]
+
+[tasks."lint:backend"]
+dir = "backend"
+run = ["uv run ruff check .", "uv run ruff format --check ."]
+
+[tasks."lint:frontend"]
+dir = "frontend"
+run = "npm run lint"
+
+[tasks.lint]
+depends = ["lint:backend", "lint:frontend"]
+
+[tasks."typecheck:backend"]
+dir = "backend"
+run = "uv run mypy --strict ."
+
+[tasks."typecheck:frontend"]
+dir = "frontend"
+run = "npm run typecheck"
+
+[tasks.typecheck]
+depends = ["typecheck:backend", "typecheck:frontend"]
+
+[tasks."test:backend"]
+dir = "backend"
+run = "uv run pytest"
+
+[tasks."test:frontend"]
+dir = "frontend"
+run = "npm test"
+
+[tasks.test]
+depends = ["test:backend", "test:frontend"]
+
+[tasks.openapi]
+description = "Regenerate shared/openapi.json and the frontend's TypeScript API types"
+run = [
+  "cd backend && uv run python -m app.openapi_export ../shared/openapi.json",
+  "cd frontend && npm run generate:api",
+]
+
+[tasks."openapi:check"]
+description = "Fail if the committed OpenAPI spec or generated types are out of date"
+depends = ["openapi"]
+run = """
+paths="shared frontend/src/api"
+untracked=$(git ls-files --others --exclude-standard -- $paths)
+if ! git diff --quiet -- $paths || [ -n "$untracked" ]; then
+  echo "OpenAPI drift detected. Run 'mise run openapi' and commit the result." >&2
+  git --no-pager diff --stat -- $paths >&2
+  [ -n "$untracked" ] && echo "Untracked: $untracked" >&2
+  exit 1
+fi
+"""
+
+[tasks."db:migrate"]
+dir = "backend"
+run = "uv run alembic upgrade head"
+
+[tasks.check]
+description = "Full gate: OpenAPI drift, lint, typecheck, test"
+run = [
+  "mise run openapi:check",
+  "mise run lint",
+  "mise run typecheck",
+  "mise run test",
+]

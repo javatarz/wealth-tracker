@@ -1,0 +1,42 @@
+# Fast guardrails on every commit (ADR 0026). `mise run check` is the full gate in CI.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+        exclude: tsconfig.*\.json$  # JSONC
+      - id: check-merge-conflict
+      - id: check-added-large-files
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.10
+    hooks:
+      - id: ruff-check
+        files: ^backend/
+      - id: ruff-format
+        files: ^backend/
+
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy --strict
+        entry: mise run typecheck:backend
+        language: system
+        files: ^backend/.*\.py$
+        pass_filenames: false
+      - id: eslint-prettier
+        name: eslint + prettier
+        entry: mise run lint:frontend
+        language: system
+        files: ^frontend/
+        pass_filenames: false
+      - id: tsc
+        name: tsc
+        entry: mise run typecheck:frontend
+        language: system
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: false

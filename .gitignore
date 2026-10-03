@@ -1,4 +1,9 @@
 .venv/
 __pycache__/
 *.pyc
-.DS_Store
+.DS_Store.env
+data/
+node_modules/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
