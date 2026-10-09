@@ -48,6 +48,11 @@ class Account(Base):
 
 
 class Instrument(Base):
+    """The thing a Position holds. Its `valuation_strategy` picks how it is valued (ADR 0016).
+
+    Strategy-specific terms live in nullable columns; each strategy reads only its own.
+    """
+
     __tablename__ = "instruments"
     __table_args__ = (UniqueConstraint("kind", "identity"),)
 
@@ -57,6 +62,39 @@ class Instrument(Base):
     name: Mapped[str] = mapped_column(String(255))
     amfi_code: Mapped[str | None] = mapped_column(String(16))
     isin: Mapped[str | None] = mapped_column(String(12))
+    valuation_strategy: Mapped[str] = mapped_column(String(32), default="market_priced")
+    principal: Mapped[Decimal | None] = mapped_column(DecimalText())
+    interest_rate: Mapped[Decimal | None] = mapped_column(DecimalText())
+    accrual_start: Mapped[date | None]
+    maturity_date: Mapped[date | None]
+    annual_income: Mapped[Decimal | None] = mapped_column(DecimalText())
+    cap_rate: Mapped[Decimal | None] = mapped_column(DecimalText())
+
+
+class Price(Base):
+    """A per-Instrument price or NAV mark, shared by every Position holding it (ADR 0016)."""
+
+    __tablename__ = "prices"
+    __table_args__ = (UniqueConstraint("instrument_id", "date"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    instrument_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("instruments.id"), index=True)
+    date: Mapped[date]
+    price: Mapped[Decimal] = mapped_column(DecimalText())
+    source: Mapped[str] = mapped_column(String(16))
+
+
+class Appraisal(Base):
+    """A user-supplied revaluation mark for an Instrument (ADR 0016)."""
+
+    __tablename__ = "appraisals"
+    __table_args__ = (UniqueConstraint("instrument_id", "date"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    instrument_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("instruments.id"), index=True)
+    date: Mapped[date]
+    value: Mapped[Decimal] = mapped_column(DecimalText())
+    recorded_at: Mapped[datetime]
 
 
 class Import(Base):

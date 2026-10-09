@@ -12,6 +12,11 @@ const position = {
   folio: "1234567890",
   units: "1830.270",
   cost_basis: "129871.58",
+  value: "150000.00",
+  valuation_strategy: "market_priced",
+  valuation_label: "Market-priced",
+  stale: false,
+  warning: null,
 };
 
 const preview = {

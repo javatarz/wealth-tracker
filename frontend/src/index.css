@@ -96,6 +96,23 @@ h4 {
   border-color: var(--ink);
 }
 
+.btn-link {
+  border: none;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  padding: 0;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.value {
+  font-size: 1.6rem;
+  font-variant-numeric: tabular-nums;
+  margin: 0.25rem 0;
+}
+
 .dropzone {
   border: 1.5px dashed var(--line);
   border-radius: 12px;

@@ -58,6 +58,63 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/positions/{position_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Position */
+    get: operations["getPosition"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/positions/{position_id}/appraisal": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Post Appraisal
+     * @description Record a user-supplied revaluation for an appraised Instrument.
+     */
+    post: operations["recordAppraisal"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/positions/{position_id}/valuation-history": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Valuation History
+     * @description The Position's value at each of its Transaction dates, using its strategy.
+     */
+    get: operations["getValuationHistory"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/statements/preview": {
     parameters: {
       query?: never;
@@ -82,6 +139,39 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** AppraisalMark */
+    AppraisalMark: {
+      /**
+       * Date
+       * Format: date
+       */
+      date: string;
+      /**
+       * Instrument Id
+       * Format: uuid
+       */
+      instrument_id: string;
+      /**
+       * Recorded At
+       * Format: date-time
+       */
+      recorded_at: string;
+      /** Value */
+      value: string;
+    };
+    /**
+     * AppraisalRequest
+     * @description A user-supplied revaluation. Lax, because JSON carries dates and decimals as text.
+     */
+    AppraisalRequest: {
+      /**
+       * Date
+       * Format: date
+       */
+      date: string;
+      /** Value */
+      value: number | string;
+    };
     /** Body_commitImport */
     Body_commitImport: {
       /**
@@ -167,8 +257,18 @@ export interface components {
       institution: string;
       /** Scheme */
       scheme: string;
+      /** Stale */
+      stale: boolean;
       /** Units */
       units: string;
+      /** Valuation Label */
+      valuation_label: string;
+      /** Valuation Strategy */
+      valuation_strategy: string;
+      /** Value */
+      value: string | null;
+      /** Warning */
+      warning: string | null;
     };
     /** Scheme */
     Scheme: {
@@ -308,6 +408,24 @@ export interface components {
       /** Value */
       value: string;
     };
+    /** ValuationPoint */
+    ValuationPoint: {
+      /**
+       * Date
+       * Format: date
+       */
+      date: string;
+      /** Priced On */
+      priced_on: string | null;
+      /** Stale */
+      stale: boolean;
+      /** Strategy */
+      strategy: string;
+      /** Value */
+      value: string | null;
+      /** Warning */
+      warning: string | null;
+    };
   };
   responses: never;
   parameters: never;
@@ -422,6 +540,126 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["PositionSummary"][];
+        };
+      };
+    };
+  };
+  getPosition: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        position_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PositionSummary"];
+        };
+      };
+      /** @description Position not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  recordAppraisal: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        position_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AppraisalRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AppraisalMark"];
+        };
+      };
+      /** @description Position not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  getValuationHistory: {
+    parameters: {
+      query?: {
+        on?: string | null;
+      };
+      header?: never;
+      path: {
+        position_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ValuationPoint"][];
+        };
+      };
+      /** @description Position not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

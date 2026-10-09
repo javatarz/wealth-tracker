@@ -13,6 +13,11 @@ const positions = [
     folio: "1234567890",
     units: "1830.270",
     cost_basis: "129871.58",
+    value: "150000.00",
+    valuation_strategy: "market_priced",
+    valuation_label: "Market-priced",
+    stale: false,
+    warning: null,
   },
   {
     id: "0b3c4f9a-8d2e-4c71-a5b6-1e2f3a4b5c6d",
@@ -21,6 +26,11 @@ const positions = [
     folio: "9876543210",
     units: "564.781",
     cost_basis: "45135.00",
+    value: "60000.00",
+    valuation_strategy: "market_priced",
+    valuation_label: "Market-priced",
+    stale: false,
+    warning: null,
   },
 ];
 
@@ -29,25 +39,49 @@ describe("PositionsList", () => {
     vi.unstubAllGlobals();
   });
 
-  it("lists each Position with its Account, units and cost basis", async () => {
+  it("lists each Position with its Account, units, cost basis and value", async () => {
     stubRoutes({ "GET /api/positions": () => respond(200, positions) });
 
-    render(<PositionsList onImport={vi.fn()} />);
+    render(<PositionsList onImport={vi.fn()} onOpen={() => vi.fn()} />);
 
     const sbi = await screen.findByRole("row", { name: /SBI Equity Hybrid/ });
     expect(
       within(sbi)
         .getAllByRole("cell")
         .map((c) => c.textContent),
-    ).toEqual(["SBI Mutual Fund · 9876543210", "564.781", "45,135.00"]);
+    ).toEqual([
+      "SBI Mutual Fund · 9876543210",
+      "564.781",
+      "45,135.00",
+      "60,000.00",
+    ]);
     expect(screen.getAllByRole("row")).toHaveLength(3);
+  });
+
+  it("opens a Position when its Scheme is clicked", async () => {
+    stubRoutes({ "GET /api/positions": () => respond(200, positions) });
+    const ids: string[] = [];
+
+    render(
+      <PositionsList
+        onImport={vi.fn()}
+        onOpen={(id) => () => {
+          ids.push(id);
+        }}
+      />,
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: /HDFC Top 200/ }),
+    );
+
+    expect(ids).toEqual(["7f1d6f8e-35a4-4c55-9df2-6f0f6b0c1a11"]);
   });
 
   it("offers an import when there are no Positions yet", async () => {
     stubRoutes({ "GET /api/positions": () => respond(200, []) });
     const onImport = vi.fn();
 
-    render(<PositionsList onImport={onImport} />);
+    render(<PositionsList onImport={onImport} onOpen={() => vi.fn()} />);
     await userEvent.click(
       await screen.findByRole("button", { name: "Import a statement" }),
     );
@@ -61,7 +95,7 @@ describe("PositionsList", () => {
       vi.fn(() => Promise.reject(new TypeError("Failed to fetch"))),
     );
 
-    render(<PositionsList onImport={vi.fn()} />);
+    render(<PositionsList onImport={vi.fn()} onOpen={() => vi.fn()} />);
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Couldn't reach the Wealth Tracker server.",
