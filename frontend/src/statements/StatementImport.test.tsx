@@ -90,7 +90,7 @@ describe("StatementImport", () => {
       Promise.resolve(respond(200, preview)),
     );
     vi.stubGlobal("fetch", fetchMock);
-    render(<StatementImport />);
+    render(<StatementImport onCommitted={vi.fn()} />);
 
     await userEvent.upload(screen.getByLabelText("Choose file"), pdf());
 
@@ -126,7 +126,7 @@ describe("StatementImport", () => {
           }),
       ),
     );
-    render(<StatementImport />);
+    render(<StatementImport onCommitted={vi.fn()} />);
 
     fireEvent.drop(screen.getByTestId("dropzone"), {
       dataTransfer: { files: [pdf("dropped.pdf")] },
@@ -156,7 +156,7 @@ describe("StatementImport", () => {
         ),
       ),
     );
-    render(<StatementImport />);
+    render(<StatementImport onCommitted={vi.fn()} />);
 
     await userEvent.upload(screen.getByLabelText("Choose file"), pdf());
 
@@ -178,7 +178,7 @@ describe("StatementImport", () => {
         ),
       ),
     );
-    render(<StatementImport />);
+    render(<StatementImport onCommitted={vi.fn()} />);
 
     await userEvent.upload(screen.getByLabelText("Choose file"), pdf());
 
@@ -193,7 +193,7 @@ describe("StatementImport", () => {
       "fetch",
       vi.fn(() => Promise.reject(new TypeError("Failed to fetch"))),
     );
-    render(<StatementImport />);
+    render(<StatementImport onCommitted={vi.fn()} />);
 
     await userEvent.upload(screen.getByLabelText("Choose file"), pdf());
 
@@ -213,7 +213,7 @@ describe("StatementImport", () => {
       )
       .mockResolvedValueOnce(respond(200, preview));
     vi.stubGlobal("fetch", fetchMock);
-    render(<StatementImport />);
+    render(<StatementImport onCommitted={vi.fn()} />);
 
     await userEvent.upload(
       screen.getByLabelText("Choose file"),
@@ -255,7 +255,7 @@ describe("StatementImport", () => {
         }),
       );
     vi.stubGlobal("fetch", fetchMock);
-    render(<StatementImport />);
+    render(<StatementImport onCommitted={vi.fn()} />);
 
     await userEvent.upload(screen.getByLabelText("Choose file"), pdf());
     expect(await screen.findByRole("alert")).not.toHaveClass("bad-text");
@@ -268,5 +268,60 @@ describe("StatementImport", () => {
     const alert = await screen.findByText(/didn't open the statement/);
     expect(alert).toHaveClass("bad-text");
     expect(screen.getByLabelText("Statement password")).toHaveValue("");
+  });
+
+  it("commits the previewed statement with the password that opened it", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(respond(200, preview))
+      .mockResolvedValueOnce(
+        respond(201, { import_id: "x", positions: 1, transactions: 2 }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const onCommitted = vi.fn();
+    render(<StatementImport onCommitted={onCommitted} />);
+
+    await userEvent.upload(screen.getByLabelText("Choose file"), pdf());
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Commit import" }),
+    );
+
+    await vi.waitFor(() => {
+      expect(onCommitted).toHaveBeenCalledOnce();
+    });
+    const request = fetchMock.mock.calls[1]?.[0] as Request;
+    expect(request.url).toMatch(/\/api\/imports$/);
+    expect(await passwordSent(fetchMock, 1)).toBe("");
+  });
+
+  it("keeps the preview and explains why a commit was refused", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(respond(200, preview))
+        .mockResolvedValueOnce(
+          respond(409, {
+            code: "already_imported",
+            message: "This statement has already been imported.",
+          }),
+        ),
+    );
+    const onCommitted = vi.fn();
+    render(<StatementImport onCommitted={onCommitted} />);
+
+    await userEvent.upload(screen.getByLabelText("Choose file"), pdf());
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Commit import" }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "This statement has already been imported.",
+    );
+    expect(screen.getByRole("button", { name: "Commit import" })).toBeEnabled();
+    expect(
+      screen.getByRole("heading", { name: "cas.pdf" }),
+    ).toBeInTheDocument();
+    expect(onCommitted).not.toHaveBeenCalled();
   });
 });
