@@ -1,40 +1,48 @@
-import { useEffect, useState } from "react";
+import { useState, type ReactNode } from "react";
 
-import { api } from "./api/client";
+import { BenchmarkSettings } from "./benchmarks/BenchmarkSettings";
+import { HealthStatus } from "./HealthStatus";
+import { PositionsList } from "./positions/PositionsList";
 import { StatementImport } from "./statements/StatementImport";
 
-type Health =
-  | { kind: "loading" }
-  | { kind: "ok"; status: string }
-  | { kind: "error"; message: string };
+type View = "positions" | "import" | "settings";
+
+const LABELS: Record<View, string> = {
+  positions: "Positions",
+  import: "Import statement",
+  settings: "Settings",
+};
 
 export default function App() {
-  const [health, setHealth] = useState<Health>({ kind: "loading" });
+  const [view, setView] = useState<View>("positions");
+  const show = (next: View) => () => {
+    setView(next);
+  };
 
-  useEffect(() => {
-    api
-      .GET("/api/health")
-      .then(({ data }) => {
-        setHealth(
-          data
-            ? { kind: "ok", status: data.status }
-            : { kind: "error", message: "Unexpected response" },
-        );
-      })
-      .catch((error: unknown) => {
-        setHealth({ kind: "error", message: String(error) });
-      });
-  }, []);
+  const screens: Record<View, ReactNode> = {
+    positions: <PositionsList onImport={show("import")} />,
+    import: <StatementImport onCommitted={show("positions")} />,
+    settings: <BenchmarkSettings />,
+  };
 
   return (
     <main>
       <h1>Wealth Tracker</h1>
-      <p className="muted small">
-        API health: {health.kind === "loading" && <span>checking…</span>}
-        {health.kind === "ok" && <span>{health.status}</span>}
-        {health.kind === "error" && <span role="alert">{health.message}</span>}
-      </p>
-      <StatementImport />
+      <HealthStatus />
+      <nav aria-label="Sections" className="sections">
+        {(Object.keys(LABELS) as View[]).map((target) => (
+          <button
+            key={target}
+            type="button"
+            className="btn"
+            aria-current={target === view ? "page" : undefined}
+            onClick={show(target)}
+          >
+            {LABELS[target]}
+          </button>
+        ))}
+      </nav>
+      {screens[view]}
     </main>
   );
 }

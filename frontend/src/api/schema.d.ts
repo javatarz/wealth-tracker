@@ -4,6 +4,125 @@
  */
 
 export interface paths {
+  "/api/benchmarks/catalog": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Catalog */
+    get: operations["listBenchmarks"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/benchmarks/config": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Config */
+    get: operations["getBenchmarkConfig"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/benchmarks/config/{asset_class}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Set Benchmark */
+    put: operations["setBenchmark"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/benchmarks/instruments": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Instrument Benchmarks */
+    get: operations["listInstrumentBenchmarks"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/benchmarks/instruments/{instrument_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Set Instrument Benchmark */
+    put: operations["setInstrumentBenchmark"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/benchmarks/overlay": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Overlay */
+    get: operations["getBenchmarkOverlay"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/benchmarks/returns": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Returns */
+    get: operations["getBenchmarkReturns"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/health": {
     parameters: {
       query?: never;
@@ -13,6 +132,43 @@ export interface paths {
     };
     /** Get Health */
     get: operations["getHealth"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/imports": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Commit Import
+     * @description Parse a statement PDF and add it to the ledger. The PDF itself is not kept.
+     */
+    post: operations["commitImport"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/positions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Positions */
+    get: operations["listPositions"];
     put?: never;
     post?: never;
     delete?: never;
@@ -45,6 +201,80 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** AssetClassBenchmarkOut */
+    AssetClassBenchmarkOut: {
+      /** Asset Class */
+      asset_class: string;
+      /** Assigned Key */
+      assigned_key: string;
+      /** Default Key */
+      default_key: string;
+      /** Overridden */
+      overridden: boolean;
+    };
+    /** BenchmarkChoice */
+    BenchmarkChoice: {
+      /** Benchmark */
+      benchmark: string;
+    };
+    /** BenchmarkConfigOut */
+    BenchmarkConfigOut: {
+      /** Asset Classes */
+      asset_classes: components["schemas"]["AssetClassBenchmarkOut"][];
+      /** Available */
+      available: components["schemas"]["BenchmarkDefinitionOut"][];
+    };
+    /** BenchmarkDefinitionOut */
+    BenchmarkDefinitionOut: {
+      /** Key */
+      key: string;
+      /** Kind */
+      kind: string;
+      /** Name */
+      name: string;
+    };
+    /** BenchmarkPointOut */
+    BenchmarkPointOut: {
+      /**
+       * Date
+       * Format: date
+       */
+      date: string;
+      /** Value */
+      value: string;
+    };
+    /** BenchmarkReturnOut */
+    BenchmarkReturnOut: {
+      /**
+       * End
+       * Format: date
+       */
+      end: string;
+      /** Key */
+      key: string;
+      /** Name */
+      name: string;
+      /** Points */
+      points: components["schemas"]["BenchmarkPointOut"][];
+      /**
+       * Start
+       * Format: date
+       */
+      start: string;
+    };
+    /** Body_commitImport */
+    Body_commitImport: {
+      /**
+       * File
+       * @description CAMS/KFintech consolidated account statement
+       */
+      file: string;
+      /**
+       * Password
+       * @default
+       */
+      password: string;
+    };
     /** Body_previewStatement */
     Body_previewStatement: {
       /**
@@ -80,6 +310,50 @@ export interface components {
        */
       status: "ok";
     };
+    /** ImportReceipt */
+    ImportReceipt: {
+      /**
+       * Import Id
+       * Format: uuid
+       */
+      import_id: string;
+      /** Positions */
+      positions: number;
+      /** Transactions */
+      transactions: number;
+    };
+    /** InstrumentBenchmarkChoice */
+    InstrumentBenchmarkChoice: {
+      /** Benchmark */
+      benchmark: string | null;
+    };
+    /** InstrumentBenchmarkOut */
+    InstrumentBenchmarkOut: {
+      /** Asset Class */
+      asset_class: string;
+      /**
+       * Instrument Id
+       * Format: uuid
+       */
+      instrument_id: string;
+      /** Name */
+      name: string;
+      /** Override Key */
+      override_key: string | null;
+      /** Resolved Key */
+      resolved_key: string;
+      /** Resolved Name */
+      resolved_name: string;
+    };
+    /** OverlayOut */
+    OverlayOut: {
+      /** Key */
+      key: string;
+      /** Points */
+      points: components["schemas"]["BenchmarkPointOut"][];
+      /** Start Value */
+      start_value: string;
+    };
     /** ParserInfo */
     ParserInfo: {
       /**
@@ -89,6 +363,24 @@ export interface components {
       name: "casparser";
       /** Version */
       version: string;
+    };
+    /** PositionSummary */
+    PositionSummary: {
+      /** Cost Basis */
+      cost_basis: string;
+      /** Folio */
+      folio: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Institution */
+      institution: string;
+      /** Scheme */
+      scheme: string;
+      /** Units */
+      units: string;
     };
     /** Scheme */
     Scheme: {
@@ -128,7 +420,7 @@ export interface components {
             | "unsupported_statement"
             | "parse_failed"
           )
-        | "file_too_large";
+        | ("file_too_large" | "already_imported" | "commit_failed");
       /** Message */
       message: string;
     };
@@ -237,6 +529,210 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  listBenchmarks: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BenchmarkDefinitionOut"][];
+        };
+      };
+    };
+  };
+  getBenchmarkConfig: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BenchmarkConfigOut"];
+        };
+      };
+    };
+  };
+  setBenchmark: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        asset_class:
+          | "equity"
+          | "debt"
+          | "gold"
+          | "real_estate"
+          | "crypto"
+          | "cash"
+          | "other";
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BenchmarkChoice"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssetClassBenchmarkOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  listInstrumentBenchmarks: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InstrumentBenchmarkOut"][];
+        };
+      };
+    };
+  };
+  setInstrumentBenchmark: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        instrument_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InstrumentBenchmarkChoice"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InstrumentBenchmarkOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  getBenchmarkOverlay: {
+    parameters: {
+      query: {
+        benchmark: string;
+        start_value: number | string;
+        from: string;
+        to: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["OverlayOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  getBenchmarkReturns: {
+    parameters: {
+      query: {
+        benchmark: string;
+        from: string;
+        to: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BenchmarkReturnOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   getHealth: {
     parameters: {
       query?: never;
@@ -253,6 +749,95 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HealthResponse"];
+        };
+      };
+    };
+  };
+  commitImport: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_commitImport"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ImportReceipt"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StatementError"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StatementError"];
+        };
+      };
+      /** @description Content Too Large */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StatementError"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StatementError"];
+        };
+      };
+    };
+  };
+  listPositions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PositionSummary"][];
         };
       };
     };

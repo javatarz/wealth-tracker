@@ -1,66 +1,75 @@
 import type { ReactNode } from "react";
 
+import { CommitImport } from "./CommitImport";
 import type { ImportState } from "./importState";
 import { PasswordPrompt } from "./PasswordPrompt";
 import { StatementPreview } from "./StatementPreview";
+import type { Upload } from "./upload";
 
 type Kind = ImportState["kind"];
 type StateOf<K extends Kind> = Extract<ImportState, { kind: K }>;
-type Retry = (file: File, password: string) => void;
-type Outcome<K extends Kind> = (state: StateOf<K>, retry: Retry) => ReactNode;
+
+export interface ImportActions {
+  retry: (upload: Upload) => void;
+  committed: () => void;
+}
+
+type Outcome<K extends Kind> = (
+  state: StateOf<K>,
+  actions: ImportActions,
+) => ReactNode;
+
+function passwordPrompt(tone: "neutral" | "bad"): Outcome<"needsPassword"> {
+  return ({ upload, message }, { retry }) => (
+    <PasswordPrompt
+      fileName={upload.file.name}
+      message={message}
+      tone={tone}
+      onSubmit={(password) => {
+        retry({ file: upload.file, password });
+      }}
+    />
+  );
+}
 
 const outcomes: { [K in Kind]: Outcome<K> } = {
   idle: () => null,
-  parsing: ({ file }) => (
+  parsing: ({ upload }) => (
     <div role="status" className="parsing">
       <progress aria-label="Parsing statement" />
-      <span>Parsing {file.name}…</span>
+      <span>Parsing {upload.file.name}…</span>
     </div>
   ),
-  needsPassword: ({ file, message }, retry) => (
-    <PasswordPrompt
-      fileName={file.name}
-      message={message}
-      tone="neutral"
-      onSubmit={(password) => {
-        retry(file, password);
-      }}
-    />
-  ),
-  wrongPassword: ({ file, message }, retry) => (
-    <PasswordPrompt
-      fileName={file.name}
-      message={message}
-      tone="bad"
-      onSubmit={(password) => {
-        retry(file, password);
-      }}
-    />
-  ),
+  needsPassword: passwordPrompt("neutral"),
+  wrongPassword: (state, actions) =>
+    passwordPrompt("bad")({ ...state, kind: "needsPassword" }, actions),
   error: ({ message }) => (
     <p role="alert" className="callout bad">
       {message}
     </p>
   ),
-  preview: ({ file, preview }) => (
-    <StatementPreview preview={preview} fileName={file.name} />
+  preview: ({ upload, preview }, { committed }) => (
+    <>
+      <CommitImport upload={upload} onCommitted={committed} />
+      <StatementPreview preview={preview} fileName={upload.file.name} />
+    </>
   ),
 };
 
 function renderOutcome<K extends Kind>(
   kind: K,
   state: StateOf<K>,
-  retry: Retry,
+  actions: ImportActions,
 ): ReactNode {
-  return outcomes[kind](state, retry);
+  return outcomes[kind](state, actions);
 }
 
 export function ImportOutcome({
   state,
-  retry,
+  actions,
 }: {
   state: ImportState;
-  retry: Retry;
+  actions: ImportActions;
 }) {
-  return renderOutcome(state.kind, state, retry);
+  return renderOutcome(state.kind, state, actions);
 }
