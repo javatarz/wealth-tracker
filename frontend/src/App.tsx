@@ -1,40 +1,84 @@
-import { useEffect, useState } from "react";
+import { useState, type ReactNode } from "react";
 
-import { api } from "./api/client";
+import { Dashboard } from "./dashboard/Dashboard";
+import type { DashboardPosition } from "./dashboard/dashboardApi";
+import { Goals } from "./dashboard/Goals";
+import { PositionDetail } from "./dashboard/PositionDetail";
+import { HealthStatus } from "./HealthStatus";
+import { PositionsList } from "./positions/PositionsList";
 import { StatementImport } from "./statements/StatementImport";
 
-type Health =
-  | { kind: "loading" }
-  | { kind: "ok"; status: string }
-  | { kind: "error"; message: string };
+type View = "dashboard" | "positions" | "goals" | "import";
+
+const LABELS: Record<View, string> = {
+  dashboard: "Net Worth",
+  positions: "Positions",
+  goals: "Goals",
+  import: "Import statement",
+};
 
 export default function App() {
-  const [health, setHealth] = useState<Health>({ kind: "loading" });
+  const [view, setView] = useState<View>("dashboard");
+  const [position, setPosition] = useState<DashboardPosition | null>(null);
 
-  useEffect(() => {
-    api
-      .GET("/api/health")
-      .then(({ data }) => {
-        setHealth(
-          data
-            ? { kind: "ok", status: data.status }
-            : { kind: "error", message: "Unexpected response" },
-        );
-      })
-      .catch((error: unknown) => {
-        setHealth({ kind: "error", message: String(error) });
-      });
-  }, []);
+  const show = (next: View) => () => {
+    setPosition(null);
+    setView(next);
+  };
+
+  const screens: Record<View, ReactNode> = {
+    dashboard: <Dashboard onOpenPosition={setPosition} />,
+    positions: <PositionsList onImport={show("import")} />,
+    goals: <Goals />,
+    import: <StatementImport onCommitted={show("positions")} />,
+  };
 
   return (
     <main>
       <h1>Wealth Tracker</h1>
-      <p className="muted small">
-        API health: {health.kind === "loading" && <span>checking…</span>}
-        {health.kind === "ok" && <span>{health.status}</span>}
-        {health.kind === "error" && <span role="alert">{health.message}</span>}
-      </p>
-      <StatementImport />
+      <HealthStatus />
+      <Nav view={view} show={show} />
+      <Current
+        view={view}
+        position={position}
+        screens={screens}
+        onClose={show(view)}
+      />
     </main>
   );
+}
+
+function Nav({ view, show }: { view: View; show: (view: View) => () => void }) {
+  return (
+    <nav aria-label="Sections" className="sections">
+      {(Object.keys(LABELS) as View[]).map((target) => (
+        <button
+          key={target}
+          type="button"
+          className="btn"
+          aria-current={target === view ? "page" : undefined}
+          onClick={show(target)}
+        >
+          {LABELS[target]}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+function Current({
+  view,
+  position,
+  screens,
+  onClose,
+}: {
+  view: View;
+  position: DashboardPosition | null;
+  screens: Record<View, ReactNode>;
+  onClose: () => void;
+}) {
+  if (position === null) {
+    return screens[view];
+  }
+  return <PositionDetail position={position} onBack={onClose} />;
 }
