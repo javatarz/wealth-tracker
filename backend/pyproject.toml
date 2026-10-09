@@ -99,6 +99,7 @@ module = [
     "app.ledger.positions",
     "app.ledger.statement_commit",
     "app.ledger.manual_entry",
+    "app.ledger.income",
     "app.api.positions",
 ]
 disallow_any_expr = false

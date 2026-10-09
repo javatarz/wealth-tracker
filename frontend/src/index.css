@@ -256,3 +256,46 @@ td.num {
 .position-summary {
   margin: 0.5rem 0 1rem;
 }
+
+.add-income {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1rem;
+  margin: 1rem 0;
+  max-width: 32rem;
+}
+
+.add-income .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.add-income input,
+.add-income select {
+  font: inherit;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.add-income h3 {
+  margin-top: 0;
+}
+
+.income-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 2rem;
+  margin: 0 0 1rem;
+}
+
+.income-breakdown dt {
+  color: var(--muted);
+  font-size: 0.85em;
+}
+
+.income-breakdown dd {
+  margin: 0;
+}

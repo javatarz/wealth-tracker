@@ -118,6 +118,129 @@
         "title": "ImportReceipt",
         "type": "object"
       },
+      "IncomeEntry": {
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "gross_amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Gross Amount",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "net_amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Net Amount",
+            "type": "string"
+          },
+          "tax_deducted": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Tax Deducted",
+            "type": "string"
+          },
+          "units": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Units"
+          },
+          "withdrawn": {
+            "title": "Withdrawn",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "date",
+          "kind",
+          "gross_amount",
+          "tax_deducted",
+          "net_amount",
+          "withdrawn",
+          "units"
+        ],
+        "title": "IncomeEntry",
+        "type": "object"
+      },
+      "IncomeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Amount"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "nav": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nav"
+          },
+          "reinvested": {
+            "default": false,
+            "title": "Reinvested",
+            "type": "boolean"
+          },
+          "tax": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tax"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "date",
+          "amount"
+        ],
+        "title": "IncomeRequest",
+        "type": "object"
+      },
       "LedgerEntry": {
         "properties": {
           "amount": {
@@ -254,12 +377,24 @@
       "PositionDetail": {
         "description": "A Position with its full ledger and the Transaction types it accepts.",
         "properties": {
+          "allowed_income_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Income Types",
+            "type": "array"
+          },
           "allowed_types": {
             "items": {
               "type": "string"
             },
             "title": "Allowed Types",
             "type": "array"
+          },
+          "cash_flow_total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cash Flow Total",
+            "type": "string"
           },
           "cost_basis": {
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -275,6 +410,18 @@
             "title": "Id",
             "type": "string"
           },
+          "income": {
+            "items": {
+              "$ref": "#/components/schemas/IncomeEntry"
+            },
+            "title": "Income",
+            "type": "array"
+          },
+          "income_total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Income Total",
+            "type": "string"
+          },
           "institution": {
             "title": "Institution",
             "type": "string"
@@ -282,6 +429,10 @@
           "instrument_kind": {
             "title": "Instrument Kind",
             "type": "string"
+          },
+          "reinvestable": {
+            "title": "Reinvestable",
+            "type": "boolean"
           },
           "scheme": {
             "title": "Scheme",
@@ -309,7 +460,12 @@
           "cost_basis",
           "instrument_kind",
           "allowed_types",
-          "transactions"
+          "allowed_income_types",
+          "reinvestable",
+          "transactions",
+          "income",
+          "income_total",
+          "cash_flow_total"
         ],
         "title": "PositionDetail",
         "type": "object"
@@ -479,6 +635,16 @@
                   "negative_cost",
                   "cost_required",
                   "position_not_found"
+                ],
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "unexpected_income_type",
+                  "non_positive_amount",
+                  "invalid_tax",
+                  "reinvestment_not_supported",
+                  "nav_required"
                 ],
                 "type": "string"
               },
@@ -936,6 +1102,130 @@
           }
         },
         "summary": "Get Position"
+      }
+    },
+    "/api/positions/{position_id}/income": {
+      "get": {
+        "description": "Every Income event recorded against the Position, oldest first.",
+        "operationId": "listIncome",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "position_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Position Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IncomeEntry"
+                  },
+                  "title": "Response Listincome",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Income"
+      },
+      "post": {
+        "description": "Record an Income event. Reinvested Income also buys units at once.",
+        "operationId": "createIncome",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "position_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Position Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IncomeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PositionDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementError"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Income"
       }
     },
     "/api/positions/{position_id}/transactions": {

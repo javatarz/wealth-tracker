@@ -75,6 +75,30 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/positions/{position_id}/income": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Income
+     * @description Every Income event recorded against the Position, oldest first.
+     */
+    get: operations["listIncome"];
+    put?: never;
+    /**
+     * Create Income
+     * @description Record an Income event. Reinvested Income also buys units at once.
+     */
+    post: operations["createIncome"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/positions/{position_id}/transactions": {
     parameters: {
       query?: never;
@@ -179,6 +203,47 @@ export interface components {
       /** Transactions */
       transactions: number;
     };
+    /** IncomeEntry */
+    IncomeEntry: {
+      /**
+       * Date
+       * Format: date
+       */
+      date: string;
+      /** Gross Amount */
+      gross_amount: string;
+      /** Kind */
+      kind: string;
+      /** Net Amount */
+      net_amount: string;
+      /** Tax Deducted */
+      tax_deducted: string;
+      /** Units */
+      units: string | null;
+      /** Withdrawn */
+      withdrawn: boolean;
+    };
+    /** IncomeRequest */
+    IncomeRequest: {
+      /** Amount */
+      amount: number | string;
+      /**
+       * Date
+       * Format: date
+       */
+      date: string;
+      /** Nav */
+      nav?: number | string | null;
+      /**
+       * Reinvested
+       * @default false
+       */
+      reinvested: boolean;
+      /** Tax */
+      tax?: number | string | null;
+      /** Type */
+      type: string;
+    };
     /** LedgerEntry */
     LedgerEntry: {
       /** Amount */
@@ -233,8 +298,12 @@ export interface components {
      * @description A Position with its full ledger and the Transaction types it accepts.
      */
     PositionDetail: {
+      /** Allowed Income Types */
+      allowed_income_types: string[];
       /** Allowed Types */
       allowed_types: string[];
+      /** Cash Flow Total */
+      cash_flow_total: string;
       /** Cost Basis */
       cost_basis: string;
       /** Folio */
@@ -244,10 +313,16 @@ export interface components {
        * Format: uuid
        */
       id: string;
+      /** Income */
+      income: components["schemas"]["IncomeEntry"][];
+      /** Income Total */
+      income_total: string;
       /** Institution */
       institution: string;
       /** Instrument Kind */
       instrument_kind: string;
+      /** Reinvestable */
+      reinvestable: boolean;
       /** Scheme */
       scheme: string;
       /** Transactions */
@@ -318,6 +393,13 @@ export interface components {
             | "negative_cost"
             | "cost_required"
             | "position_not_found"
+          )
+        | (
+            | "unexpected_income_type"
+            | "non_positive_amount"
+            | "invalid_tax"
+            | "reinvestment_not_supported"
+            | "nav_required"
           )
         | ("file_too_large" | "already_imported" | "commit_failed");
       /** Message */
@@ -555,6 +637,99 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["PositionDetail"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StatementError"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  listIncome: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        position_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IncomeEntry"][];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StatementError"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  createIncome: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        position_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["IncomeRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PositionDetail"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StatementError"];
         };
       };
       /** @description Not Found */

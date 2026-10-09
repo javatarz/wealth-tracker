@@ -85,6 +85,9 @@ class Position(Base):
     instrument: Mapped[Instrument] = relationship()
     transactions: Mapped[list["Transaction"]] = relationship(back_populates="position")
     lots: Mapped[list["Lot"]] = relationship(order_by="(Lot.acquired_on, Lot.id)")
+    income: Mapped[list["Income"]] = relationship(
+        back_populates="position", order_by="(Income.date, Income.id)"
+    )
 
     @property
     def ledger_key(self) -> str:
@@ -119,6 +122,7 @@ class Transaction(Base):
     amount: Mapped[Decimal | None] = mapped_column(DecimalText())
     nav: Mapped[Decimal | None] = mapped_column(DecimalText())
     notes: Mapped[str | None] = mapped_column(String(500))
+    income_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("incomes.id"))
     synthetic: Mapped[bool] = mapped_column(default=False)
     fingerprint: Mapped[str | None] = mapped_column(String(64), unique=True)
 
@@ -161,3 +165,41 @@ class Lot(Base):
         self.remaining_units -= taken
         self.remaining_cost -= released
         return units - taken
+
+
+class Income(Base):
+    """Value a Position generated without changing its quantity (ADR 0003).
+
+    Withdrawn Income crosses the Portfolio boundary and is a Cash Flow; reinvested
+    Income produces a Transaction that raises the Position's quantity.
+    """
+
+    __tablename__ = "incomes"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    position_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("positions.id"), index=True)
+    date: Mapped[date]
+    kind: Mapped[str] = mapped_column(String(16))
+    gross_amount: Mapped[Decimal] = mapped_column(DecimalText())
+    tax_deducted: Mapped[Decimal] = mapped_column(DecimalText())
+    net_amount: Mapped[Decimal] = mapped_column(DecimalText())
+    withdrawn: Mapped[bool] = mapped_column(default=False)
+    fingerprint: Mapped[str | None] = mapped_column(String(64), unique=True)
+
+    position: Mapped[Position] = relationship(back_populates="income")
+    reinvestment: Mapped["Transaction | None"] = relationship(
+        primaryjoin="Income.id == Transaction.income_id",
+        foreign_keys="Transaction.income_id",
+        uselist=False,
+        viewonly=True,
+        lazy="selectin",
+    )
+
+    def cash_flow(self) -> Decimal:
+        """Withdrawn Income is money the household took out; reinvested Income stays in."""
+        return self.net_amount if self.withdrawn else ZERO
+
+    def reinvested_units(self) -> Decimal | None:
+        """The units the reinvestment Transaction bought, or None when withdrawn."""
+        transaction = self.reinvestment
+        return None if transaction is None else transaction.units

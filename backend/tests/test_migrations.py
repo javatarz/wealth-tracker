@@ -13,6 +13,7 @@ LEDGER_TABLES = {
     "transactions",
     "lots",
     "imports",
+    "incomes",
 }
 
 

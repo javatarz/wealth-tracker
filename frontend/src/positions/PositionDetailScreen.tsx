@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { formatDecimal } from "../statements/formatDecimal";
 import { AddTransactionForm } from "./AddTransactionForm";
+import { IncomeSection } from "./IncomeSection";
 import {
   getPosition,
   type DetailResult,
@@ -97,6 +98,7 @@ function PositionBody({
         today={todayIso()}
         onAdded={onAdded}
       />
+      <IncomeSection position={position} onRecorded={onAdded} />
       <h3>Transactions</h3>
       <TransactionList entries={position.transactions} />
     </>

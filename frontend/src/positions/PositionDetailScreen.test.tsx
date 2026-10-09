@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -16,6 +16,11 @@ const detail = {
   cost_basis: "129871.58",
   instrument_kind: "mutual_fund",
   allowed_types: ["purchase", "redemption", "sip"],
+  allowed_income_types: ["dividend", "idcw", "interest", "rent"],
+  reinvestable: true,
+  income: [],
+  income_total: "0",
+  cash_flow_total: "0",
   transactions: [
     {
       date: "2024-05-10",
@@ -29,7 +34,12 @@ const detail = {
   ],
 };
 
-function routes(overrides: Record<string, () => Response> = {}) {
+function routes(
+  overrides: Record<
+    string,
+    (request: Request) => Response | Promise<Response>
+  > = {},
+) {
   return {
     [`GET /api/positions/${POSITION_ID}`]: () => respond(200, detail),
     ...overrides,
@@ -63,11 +73,11 @@ describe("PositionDetailScreen", () => {
     render(<PositionDetailScreen positionId={POSITION_ID} onBack={vi.fn()} />);
 
     const select = await screen.findByLabelText("Type");
-    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual([
-      "Purchase",
-      "Redemption",
-      "SIP",
-    ]);
+    expect(
+      within(select)
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toEqual(["Purchase", "Redemption", "SIP"]);
     expect(select).toHaveValue("purchase");
   });
 
@@ -158,5 +168,124 @@ describe("PositionDetailScreen", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("future");
     expect(post).not.toHaveBeenCalled();
+  });
+
+  it("records a withdrawn dividend as Cash Flow without changing units", async () => {
+    const updated = {
+      ...detail,
+      income: [
+        {
+          date: "2026-09-01",
+          kind: "dividend",
+          gross_amount: "1000.00",
+          tax_deducted: "100.00",
+          net_amount: "900.00",
+          withdrawn: true,
+          units: null,
+        },
+      ],
+      income_total: "900.00",
+      cash_flow_total: "900.00",
+    };
+    stubRoutes(
+      routes({
+        [`POST /api/positions/${POSITION_ID}/income`]: () =>
+          respond(201, updated),
+      }),
+    );
+
+    render(<PositionDetailScreen positionId={POSITION_ID} onBack={vi.fn()} />);
+    await userEvent.selectOptions(
+      await screen.findByLabelText("Income type"),
+      "dividend",
+    );
+    await userEvent.selectOptions(
+      screen.getByLabelText("Disposition"),
+      "withdrawn",
+    );
+    await userEvent.type(screen.getByLabelText("Income date"), "2026-09-01");
+    await userEvent.type(screen.getByLabelText("Gross amount (₹)"), "1000.00");
+    await userEvent.type(screen.getByLabelText(/Tax deducted/), "100.00");
+    await userEvent.click(screen.getByRole("button", { name: "Add Income" }));
+
+    expect(
+      await screen.findByText("Withdrawn (Cash Flow)"),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("₹900.00")).toHaveLength(2);
+    expect(screen.getByText(/Units 1,830.270/)).toBeInTheDocument();
+  });
+
+  it("reinvests a dividend by sending the NAV and showing the raised quantity", async () => {
+    const updated = {
+      ...detail,
+      units: "1860.270",
+      cost_basis: "130771.58",
+      income: [
+        {
+          date: "2026-09-01",
+          kind: "dividend",
+          gross_amount: "1000.00",
+          tax_deducted: "100.00",
+          net_amount: "900.00",
+          withdrawn: false,
+          units: "30.000",
+        },
+      ],
+      income_total: "900.00",
+      cash_flow_total: "0",
+    };
+    const bodies: unknown[] = [];
+    stubRoutes(
+      routes({
+        [`POST /api/positions/${POSITION_ID}/income`]: async (
+          request: Request,
+        ) => {
+          bodies.push(await request.json());
+          return respond(201, updated);
+        },
+      }),
+    );
+
+    render(<PositionDetailScreen positionId={POSITION_ID} onBack={vi.fn()} />);
+    await userEvent.type(
+      await screen.findByLabelText("Income date"),
+      "2026-09-01",
+    );
+    await userEvent.type(screen.getByLabelText("Gross amount (₹)"), "1000.00");
+    await userEvent.type(screen.getByLabelText(/Tax deducted/), "100.00");
+    await userEvent.type(
+      screen.getByLabelText("Reinvestment NAV (₹)"),
+      "30.00",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Add Income" }));
+
+    expect(bodies[0]).toMatchObject({
+      type: "dividend",
+      reinvested: true,
+      nav: "30.00",
+    });
+    expect(await screen.findByText(/Units 1,860.270/)).toBeInTheDocument();
+  });
+
+  it("only offers Withdraw when the Instrument cannot hold units", async () => {
+    stubRoutes(
+      routes({
+        [`GET /api/positions/${POSITION_ID}`]: () =>
+          respond(200, {
+            ...detail,
+            instrument_kind: "fd",
+            reinvestable: false,
+          }),
+      }),
+    );
+
+    render(<PositionDetailScreen positionId={POSITION_ID} onBack={vi.fn()} />);
+
+    const disposition = await screen.findByLabelText("Disposition");
+    expect(disposition).toHaveValue("withdrawn");
+    expect(within(disposition).getAllByRole("option")).toHaveLength(1);
+    expect(within(disposition).getByRole("option")).toHaveTextContent(
+      "Withdraw",
+    );
   });
 });

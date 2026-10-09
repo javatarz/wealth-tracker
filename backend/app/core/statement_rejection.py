@@ -20,9 +20,18 @@ ManualEntryCode = Literal[
     "position_not_found",
 ]
 
+IncomeCode = Literal[
+    "unexpected_income_type",
+    "non_positive_amount",
+    "invalid_tax",
+    "reinvestment_not_supported",
+    "nav_required",
+]
+
 RejectionCode = (
     ParseErrorCode
     | ManualEntryCode
+    | IncomeCode
     | Literal["file_too_large", "already_imported", "commit_failed"]
 )
 
