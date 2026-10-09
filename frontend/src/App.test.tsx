@@ -54,6 +54,48 @@ describe("App", () => {
     expect(await screen.findByText(/Failed to fetch/)).toBeInTheDocument();
   });
 
+  it("opens Benchmark settings from the navigation", async () => {
+    stubRoutes({
+      "GET /api/health": () => respond(200, { status: "ok" }),
+      "GET /api/positions": () => respond(200, []),
+      "GET /api/benchmarks/config": () =>
+        respond(200, {
+          available: [
+            { key: "nifty50_tri", name: "NIFTY 50 TRI", kind: "index" },
+          ],
+          asset_classes: [
+            {
+              asset_class: "equity",
+              assigned_key: "nifty50_tri",
+              default_key: "nifty50_tri",
+              overridden: false,
+            },
+          ],
+        }),
+      "GET /api/benchmarks/instruments": () => respond(200, []),
+      "GET /api/benchmarks/returns": () =>
+        respond(200, {
+          key: "nifty50_tri",
+          name: "NIFTY 50 TRI",
+          start: "2024-01-01",
+          end: "2024-12-31",
+          points: [
+            { date: "2024-01-01", value: "100" },
+            { date: "2024-12-31", value: "115" },
+          ],
+        }),
+    });
+
+    render(<App />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    );
+
+    expect(await screen.findByText("Benchmark settings")).toBeInTheDocument();
+    expect(screen.getByText(/Equity — NIFTY 50 TRI/)).toBeInTheDocument();
+  });
+
   it("commits a previewed statement and lands on its Positions", async () => {
     let committed = false;
     stubRoutes({

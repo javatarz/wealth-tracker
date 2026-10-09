@@ -1,6 +1,152 @@
 {
   "components": {
     "schemas": {
+      "AssetClassBenchmarkOut": {
+        "properties": {
+          "asset_class": {
+            "title": "Asset Class",
+            "type": "string"
+          },
+          "assigned_key": {
+            "title": "Assigned Key",
+            "type": "string"
+          },
+          "default_key": {
+            "title": "Default Key",
+            "type": "string"
+          },
+          "overridden": {
+            "title": "Overridden",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "asset_class",
+          "assigned_key",
+          "default_key",
+          "overridden"
+        ],
+        "title": "AssetClassBenchmarkOut",
+        "type": "object"
+      },
+      "BenchmarkChoice": {
+        "properties": {
+          "benchmark": {
+            "title": "Benchmark",
+            "type": "string"
+          }
+        },
+        "required": [
+          "benchmark"
+        ],
+        "title": "BenchmarkChoice",
+        "type": "object"
+      },
+      "BenchmarkConfigOut": {
+        "properties": {
+          "asset_classes": {
+            "items": {
+              "$ref": "#/components/schemas/AssetClassBenchmarkOut"
+            },
+            "title": "Asset Classes",
+            "type": "array"
+          },
+          "available": {
+            "items": {
+              "$ref": "#/components/schemas/BenchmarkDefinitionOut"
+            },
+            "title": "Available",
+            "type": "array"
+          }
+        },
+        "required": [
+          "available",
+          "asset_classes"
+        ],
+        "title": "BenchmarkConfigOut",
+        "type": "object"
+      },
+      "BenchmarkDefinitionOut": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "kind"
+        ],
+        "title": "BenchmarkDefinitionOut",
+        "type": "object"
+      },
+      "BenchmarkPointOut": {
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "value": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "value"
+        ],
+        "title": "BenchmarkPointOut",
+        "type": "object"
+      },
+      "BenchmarkReturnOut": {
+        "properties": {
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/BenchmarkPointOut"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "start",
+          "end",
+          "points"
+        ],
+        "title": "BenchmarkReturnOut",
+        "type": "object"
+      },
       "Body_commitImport": {
         "properties": {
           "file": {
@@ -116,6 +262,99 @@
           "transactions"
         ],
         "title": "ImportReceipt",
+        "type": "object"
+      },
+      "InstrumentBenchmarkChoice": {
+        "properties": {
+          "benchmark": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Benchmark"
+          }
+        },
+        "required": [
+          "benchmark"
+        ],
+        "title": "InstrumentBenchmarkChoice",
+        "type": "object"
+      },
+      "InstrumentBenchmarkOut": {
+        "properties": {
+          "asset_class": {
+            "title": "Asset Class",
+            "type": "string"
+          },
+          "instrument_id": {
+            "format": "uuid",
+            "title": "Instrument Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "override_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Key"
+          },
+          "resolved_key": {
+            "title": "Resolved Key",
+            "type": "string"
+          },
+          "resolved_name": {
+            "title": "Resolved Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "instrument_id",
+          "name",
+          "asset_class",
+          "resolved_key",
+          "resolved_name",
+          "override_key"
+        ],
+        "title": "InstrumentBenchmarkOut",
+        "type": "object"
+      },
+      "OverlayOut": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/BenchmarkPointOut"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "start_value": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Start Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "start_value",
+          "points"
+        ],
+        "title": "OverlayOut",
         "type": "object"
       },
       "ParserInfo": {
@@ -581,6 +820,311 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/benchmarks/catalog": {
+      "get": {
+        "operationId": "listBenchmarks",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BenchmarkDefinitionOut"
+                  },
+                  "title": "Response Listbenchmarks",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Catalog"
+      }
+    },
+    "/api/benchmarks/config": {
+      "get": {
+        "operationId": "getBenchmarkConfig",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarkConfigOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Config"
+      }
+    },
+    "/api/benchmarks/config/{asset_class}": {
+      "put": {
+        "operationId": "setBenchmark",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "asset_class",
+            "required": true,
+            "schema": {
+              "enum": [
+                "equity",
+                "debt",
+                "gold",
+                "real_estate",
+                "crypto",
+                "cash",
+                "other"
+              ],
+              "title": "Asset Class",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BenchmarkChoice"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetClassBenchmarkOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Benchmark"
+      }
+    },
+    "/api/benchmarks/instruments": {
+      "get": {
+        "operationId": "listInstrumentBenchmarks",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/InstrumentBenchmarkOut"
+                  },
+                  "title": "Response Listinstrumentbenchmarks",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Instrument Benchmarks"
+      }
+    },
+    "/api/benchmarks/instruments/{instrument_id}": {
+      "put": {
+        "operationId": "setInstrumentBenchmark",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "instrument_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Instrument Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstrumentBenchmarkChoice"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstrumentBenchmarkOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Instrument Benchmark"
+      }
+    },
+    "/api/benchmarks/overlay": {
+      "get": {
+        "operationId": "getBenchmarkOverlay",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "benchmark",
+            "required": true,
+            "schema": {
+              "title": "Benchmark",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start_value",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                }
+              ],
+              "title": "Start Value"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "To",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverlayOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Overlay"
+      }
+    },
+    "/api/benchmarks/returns": {
+      "get": {
+        "operationId": "getBenchmarkReturns",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "benchmark",
+            "required": true,
+            "schema": {
+              "title": "Benchmark",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "To",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarkReturnOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Returns"
+      }
+    },
     "/api/health": {
       "get": {
         "operationId": "getHealth",

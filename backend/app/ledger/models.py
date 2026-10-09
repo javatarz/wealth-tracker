@@ -59,6 +59,41 @@ class Instrument(Base):
     isin: Mapped[str | None] = mapped_column(String(12))
 
 
+class BenchmarkAssignment(Base):
+    """The Benchmark an asset class uses when an Instrument has no override (ADR 0017)."""
+
+    __tablename__ = "benchmark_assignments"
+
+    asset_class: Mapped[str] = mapped_column(String(32), primary_key=True)
+    benchmark_instrument_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("instruments.id"))
+
+    benchmark: Mapped[Instrument] = relationship(foreign_keys=[benchmark_instrument_id])
+
+
+class InstrumentBenchmark(Base):
+    """A per-Instrument Benchmark override, which wins over the asset-class default."""
+
+    __tablename__ = "instrument_benchmarks"
+
+    instrument_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("instruments.id"), primary_key=True)
+    benchmark_instrument_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("instruments.id"))
+
+    benchmark: Mapped[Instrument] = relationship(foreign_keys=[benchmark_instrument_id])
+
+
+class Price(Base):
+    """Per-Instrument price history, shared by every Position holding it (ADR 0016)."""
+
+    __tablename__ = "prices"
+    __table_args__ = (UniqueConstraint("instrument_id", "date"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    instrument_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("instruments.id"), index=True)
+    date: Mapped[date]
+    price: Mapped[Decimal] = mapped_column(DecimalText())
+    source: Mapped[str] = mapped_column(String(32))
+
+
 class Import(Base):
     __tablename__ = "imports"
 
