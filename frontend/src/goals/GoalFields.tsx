@@ -9,6 +9,23 @@ interface GoalFieldsProps {
   onChange: (draft: GoalDraft) => void;
 }
 
+const STRATEGIES = [
+  { value: "", label: "None" },
+  { value: "cagr", label: "Fixed CAGR" },
+  { value: "trailing_window", label: "Trailing window average" },
+] as const;
+
+const RATE_FIELDS: Record<
+  string,
+  { label: string; key: "cagrRate" | "trailingWindowYears" } | undefined
+> = {
+  cagr: { label: "CAGR rate (e.g. 0.12)", key: "cagrRate" },
+  trailing_window: {
+    label: "Window (years)",
+    key: "trailingWindowYears",
+  },
+};
+
 export function GoalFields({ draft, accounts, onChange }: GoalFieldsProps) {
   const edit = (patch: Partial<GoalDraft>) => {
     onChange({ ...draft, ...patch });
@@ -39,8 +56,46 @@ export function GoalFields({ draft, accounts, onChange }: GoalFieldsProps) {
           edit({ targetDate });
         }}
       />
+      <StrategyPicker draft={draft} onChange={edit} />
       <AccountPicker accounts={accounts} draft={draft} onChange={onChange} />
     </>
+  );
+}
+
+function StrategyPicker({
+  draft,
+  onChange,
+}: {
+  draft: GoalDraft;
+  onChange: (patch: Partial<GoalDraft>) => void;
+}) {
+  const field = RATE_FIELDS[draft.projectionStrategy];
+  return (
+    <label>
+      Projection strategy
+      <select
+        value={draft.projectionStrategy}
+        onChange={(event) => {
+          onChange({ projectionStrategy: event.target.value });
+        }}
+      >
+        {STRATEGIES.map((strategy) => (
+          <option key={strategy.value} value={strategy.value}>
+            {strategy.label}
+          </option>
+        ))}
+      </select>
+      {field && (
+        <TextField
+          label={field.label}
+          inputMode="decimal"
+          value={draft[field.key]}
+          onChange={(value) => {
+            onChange({ [field.key]: value });
+          }}
+        />
+      )}
+    </label>
   );
 }
 

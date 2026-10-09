@@ -1,7 +1,7 @@
 import uuid
 from datetime import date
 from decimal import Decimal
-from typing import Self
+from typing import Literal, Self
 
 from fastapi import APIRouter, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -26,6 +26,9 @@ router = APIRouter()
 _STATUS_BY_CODE: dict[GoalRejectionCode, int] = {
     "goal_not_found": status.HTTP_404_NOT_FOUND,
     "unknown_accounts": status.HTTP_422_UNPROCESSABLE_CONTENT,
+    "unknown_position": status.HTTP_422_UNPROCESSABLE_CONTENT,
+    "schedule_not_found": status.HTTP_404_NOT_FOUND,
+    "invalid_schedule": status.HTTP_422_UNPROCESSABLE_CONTENT,
 }
 
 
@@ -63,9 +66,20 @@ class GoalWrite(BaseModel):
     target_amount: Decimal = Field(gt=0)
     target_date: date
     account_ids: list[uuid.UUID] = Field(default_factory=list)
+    projection_strategy: Literal["cagr", "trailing_window"] | None = None
+    cagr_rate: Decimal | None = Field(default=None, ge=0)
+    trailing_window_years: int | None = Field(default=None, gt=0, le=100)
 
     def draft(self) -> GoalDraft:
-        return GoalDraft(self.name, self.target_amount, self.target_date, tuple(self.account_ids))
+        return GoalDraft(
+            self.name,
+            self.target_amount,
+            self.target_date,
+            tuple(self.account_ids),
+            self.projection_strategy,
+            self.cagr_rate,
+            self.trailing_window_years,
+        )
 
 
 class GoalSummary(BaseModel):
@@ -78,6 +92,9 @@ class GoalSummary(BaseModel):
     account_ids: list[uuid.UUID]
     current_value: Decimal
     percent_funded: Decimal
+    projection_strategy: str | None
+    cagr_rate: Decimal | None
+    trailing_window_years: int | None
 
     @classmethod
     def of(cls, goal: Goal, funded: GoalProgress) -> Self:
@@ -89,6 +106,9 @@ class GoalSummary(BaseModel):
             account_ids=[account.id for account in goal.accounts],
             current_value=funded.current_value,
             percent_funded=funded.percent_funded,
+            projection_strategy=goal.projection_strategy,
+            cagr_rate=goal.cagr_rate,
+            trailing_window_years=goal.trailing_window_years,
         )
 
 

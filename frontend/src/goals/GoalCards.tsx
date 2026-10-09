@@ -2,6 +2,8 @@ import { useState } from "react";
 
 import { formatDecimal } from "../statements/formatDecimal";
 import { deleteGoal } from "./goalCommands";
+import { ProjectionPanel } from "./ProjectionPanel";
+import { ScheduleList } from "./ScheduleList";
 import type { GoalSummary } from "./listGoals";
 
 interface GoalCardsProps {
@@ -58,6 +60,8 @@ function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
         {formatDecimal(goal.target_amount)} ·{" "}
         {formatDecimal(goal.percent_funded)}%
       </p>
+      <ProjectionPanel goalId={goal.id} />
+      <ScheduleList goalId={goal.id} />
       <GoalCardActions
         confirming={confirming}
         onEdit={() => {

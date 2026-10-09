@@ -57,6 +57,58 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/goals/{goal_id}/projection": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Projection */
+    get: operations["getGoalProjection"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/goals/{goal_id}/projection/history": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Projection History */
+    get: operations["getGoalProjectionHistory"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/goals/{goal_id}/scheduled-transactions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Schedules */
+    get: operations["listScheduledTransactions"];
+    put?: never;
+    /** Post Schedule */
+    post: operations["createScheduledTransaction"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/health": {
     parameters: {
       query?: never;
@@ -106,6 +158,23 @@ export interface paths {
     put?: never;
     post?: never;
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/scheduled-transactions/{schedule_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete Schedule Route */
+    delete: operations["deleteScheduledTransaction"];
     options?: never;
     head?: never;
     patch?: never;
@@ -188,7 +257,12 @@ export interface components {
        * Code
        * @enum {string}
        */
-      code: "goal_not_found" | "unknown_accounts";
+      code:
+        | "goal_not_found"
+        | "unknown_accounts"
+        | "unknown_position"
+        | "schedule_not_found"
+        | "invalid_schedule";
       /** Message */
       message: string;
     };
@@ -196,6 +270,8 @@ export interface components {
     GoalSummary: {
       /** Account Ids */
       account_ids: string[];
+      /** Cagr Rate */
+      cagr_rate: string | null;
       /** Current Value */
       current_value: string;
       /**
@@ -207,6 +283,8 @@ export interface components {
       name: string;
       /** Percent Funded */
       percent_funded: string;
+      /** Projection Strategy */
+      projection_strategy: string | null;
       /** Target Amount */
       target_amount: string;
       /**
@@ -214,6 +292,8 @@ export interface components {
        * Format: date
        */
       target_date: string;
+      /** Trailing Window Years */
+      trailing_window_years: number | null;
     };
     /**
      * GoalWrite
@@ -222,8 +302,12 @@ export interface components {
     GoalWrite: {
       /** Account Ids */
       account_ids?: string[];
+      /** Cagr Rate */
+      cagr_rate?: number | string | null;
       /** Name */
       name: string;
+      /** Projection Strategy */
+      projection_strategy?: ("cagr" | "trailing_window") | null;
       /** Target Amount */
       target_amount: number | string;
       /**
@@ -231,6 +315,8 @@ export interface components {
        * Format: date
        */
       target_date: string;
+      /** Trailing Window Years */
+      trailing_window_years?: number | null;
     };
     /** HTTPValidationError */
     HTTPValidationError: {
@@ -244,6 +330,16 @@ export interface components {
        * @constant
        */
       status: "ok";
+    };
+    /** HistoryPointView */
+    HistoryPointView: {
+      /**
+       * On
+       * Format: date
+       */
+      on: string;
+      /** Projected Value */
+      projected_value: string;
     };
     /** ImportReceipt */
     ImportReceipt: {
@@ -267,6 +363,16 @@ export interface components {
       /** Version */
       version: string;
     };
+    /** PositionOption */
+    PositionOption: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+    };
     /** PositionSummary */
     PositionSummary: {
       /** Cost Basis */
@@ -284,6 +390,117 @@ export interface components {
       scheme: string;
       /** Units */
       units: string;
+    };
+    /** ProjectionHistoryView */
+    ProjectionHistoryView: {
+      /**
+       * Goal Id
+       * Format: uuid
+       */
+      goal_id: string;
+      /** Points */
+      points: components["schemas"]["HistoryPointView"][];
+    };
+    /** ProjectionView */
+    ProjectionView: {
+      /**
+       * As Of
+       * Format: date
+       */
+      as_of: string;
+      /** Current Value */
+      current_value: string;
+      /** Gap */
+      gap: string;
+      /**
+       * Goal Id
+       * Format: uuid
+       */
+      goal_id: string;
+      /** Projected Value */
+      projected_value: string;
+      /** Rate */
+      rate: string | null;
+      /** Status */
+      status: string;
+      /** Strategy */
+      strategy: string | null;
+      /** Target Amount */
+      target_amount: string;
+      /**
+       * Target Date
+       * Format: date
+       */
+      target_date: string;
+      /** Trajectory */
+      trajectory: components["schemas"]["TrajectoryPointView"][];
+    };
+    /** ScheduleBoard */
+    ScheduleBoard: {
+      /** Positions */
+      positions: components["schemas"]["PositionOption"][];
+      /** Schedules */
+      schedules: components["schemas"]["ScheduleView"][];
+    };
+    /** ScheduleView */
+    ScheduleView: {
+      /** Amount */
+      amount: string;
+      /** Description */
+      description: string;
+      /** Direction */
+      direction: string;
+      /** End Date */
+      end_date: string | null;
+      /** Escalation Rate */
+      escalation_rate: string;
+      /** Frequency */
+      frequency: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Position Id
+       * Format: uuid
+       */
+      position_id: string;
+      /** Position Name */
+      position_name: string;
+      /**
+       * Start Date
+       * Format: date
+       */
+      start_date: string;
+    };
+    /** ScheduleWrite */
+    ScheduleWrite: {
+      /** Amount */
+      amount: number | string;
+      /** Description */
+      description: string;
+      /** Direction */
+      direction: string;
+      /** End Date */
+      end_date?: string | null;
+      /**
+       * Escalation Rate
+       * @default 0
+       */
+      escalation_rate: number | string;
+      /** Frequency */
+      frequency: string;
+      /**
+       * Position Id
+       * Format: uuid
+       */
+      position_id: string;
+      /**
+       * Start Date
+       * Format: date
+       */
+      start_date: string;
     };
     /** Scheme */
     Scheme: {
@@ -352,6 +569,16 @@ export interface components {
       parse_warnings: string[];
       parser: components["schemas"]["ParserInfo"];
       statement_period: components["schemas"]["StatementPeriod"];
+    };
+    /** TrajectoryPointView */
+    TrajectoryPointView: {
+      /**
+       * On
+       * Format: date
+       */
+      on: string;
+      /** Value */
+      value: string;
     };
     /** Transaction */
     Transaction: {
@@ -596,6 +823,174 @@ export interface operations {
       };
     };
   };
+  getGoalProjection: {
+    parameters: {
+      query?: {
+        as_of?: string | null;
+      };
+      header?: never;
+      path: {
+        goal_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProjectionView"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GoalError"];
+        };
+      };
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GoalError"];
+        };
+      };
+    };
+  };
+  getGoalProjectionHistory: {
+    parameters: {
+      query?: {
+        as_of?: string | null;
+      };
+      header?: never;
+      path: {
+        goal_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProjectionHistoryView"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GoalError"];
+        };
+      };
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GoalError"];
+        };
+      };
+    };
+  };
+  listScheduledTransactions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        goal_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ScheduleBoard"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GoalError"];
+        };
+      };
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GoalError"];
+        };
+      };
+    };
+  };
+  createScheduledTransaction: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        goal_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ScheduleWrite"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ScheduleView"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GoalError"];
+        };
+      };
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GoalError"];
+        };
+      };
+    };
+  };
   getHealth: {
     parameters: {
       query?: never;
@@ -701,6 +1096,44 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["PositionSummary"][];
+        };
+      };
+    };
+  };
+  deleteScheduledTransaction: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        schedule_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GoalError"];
+        };
+      };
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GoalError"];
         };
       };
     };
