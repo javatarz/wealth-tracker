@@ -1,9 +1,22 @@
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import health, statements
+from app.api import goals, health, imports, positions, projections, statements
+from app.api.goals import handle_rejection as handle_goal_rejection
+from app.api.rejections import handle_rejection
 from app.core.config import Settings, get_settings
 from app.core.frontend import SPAStaticFiles
+from app.core.statement_rejection import StatementRejectedError
+from app.goals.errors import GoalRejectedError
+
+ROUTERS: tuple[APIRouter, ...] = (
+    health.router,
+    statements.router,
+    imports.router,
+    positions.router,
+    goals.router,
+    projections.router,
+)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -15,8 +28,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    app.include_router(health.router, prefix="/api")
-    app.include_router(statements.router, prefix="/api")
+    app.add_exception_handler(StatementRejectedError, handle_rejection)
+    app.add_exception_handler(GoalRejectedError, handle_goal_rejection)
+    for router in ROUTERS:
+        app.include_router(router, prefix="/api")
     if settings.static_dir is not None:
         app.mount("/", SPAStaticFiles(directory=settings.static_dir, html=True), name="frontend")
     return app
