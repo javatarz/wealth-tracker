@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import health, imports, positions, statements
+from app.api import dashboard, health, imports, positions, statements
 from app.api.rejections import handle_rejection
 from app.core.config import Settings, get_settings
 from app.core.frontend import SPAStaticFiles
@@ -22,6 +22,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(statements.router, prefix="/api")
     app.include_router(imports.router, prefix="/api")
     app.include_router(positions.router, prefix="/api")
+    app.include_router(dashboard.router, prefix="/api")
     if settings.static_dir is not None:
         app.mount("/", SPAStaticFiles(directory=settings.static_dir, html=True), name="frontend")
     return app

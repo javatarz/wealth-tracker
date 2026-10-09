@@ -16,6 +16,7 @@ from app.core.database import Base
 from app.core.statement_preview import Folio, Scheme, StatementPreview
 from app.core.statement_preview import Transaction as StatementTransaction
 from app.core.statement_rejection import StatementRejectedError
+from app.ledger.asset_classes import asset_class_for
 from app.ledger.fingerprint import transaction_fingerprint
 from app.ledger.models import (
     PAISE,
@@ -27,10 +28,10 @@ from app.ledger.models import (
     Position,
     Transaction,
 )
+from app.ledger.positions import ensure_default_member
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MEMBER_NAME = "Me"
 FOLIO_ACCOUNT = "mf_folio"
 MUTUAL_FUND = "mutual_fund"
 OPENING_BALANCE = "OPENING_BALANCE"
@@ -69,7 +70,7 @@ def commit_statement(
 ) -> CommittedImport:
     """Adds the statement to the session. The caller owns the database transaction."""
     _ensure_not_imported(session, content_hash)
-    batch = _new_import(statement, content_hash, _default_member(session))
+    batch = _new_import(statement, content_hash, ensure_default_member(session))
     session.add(batch)
     writer = StatementWriter(session, batch)
     for folio in statement.folios:
@@ -87,11 +88,6 @@ def _ensure_not_imported(session: Session, content_hash: str) -> None:
         raise StatementRejectedError(
             "already_imported", "This statement has already been imported."
         )
-
-
-def _default_member(session: Session) -> HouseholdMember:
-    member = session.scalars(select(HouseholdMember).limit(1)).first()
-    return member or _added(session, HouseholdMember(id=uuid.uuid4(), name=DEFAULT_MEMBER_NAME))
 
 
 def _new_import(statement: StatementPreview, content_hash: str, member: HouseholdMember) -> Import:
@@ -212,6 +208,7 @@ class StatementWriter:
             kind=MUTUAL_FUND,
             identity=identity,
             name=scheme.scheme,
+            asset_class=asset_class_for(scheme),
             amfi_code=scheme.amfi,
             isin=scheme.isin,
         )

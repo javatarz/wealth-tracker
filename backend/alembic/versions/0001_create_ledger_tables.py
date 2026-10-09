@@ -58,6 +58,7 @@ def _create_instruments() -> None:
         sa.Column("kind", sa.String(length=32), nullable=False),
         sa.Column("identity", sa.String(length=64), nullable=False),
         sa.Column("name", sa.String(length=255), nullable=False),
+        sa.Column("asset_class", sa.String(length=32), nullable=False, server_default="other"),
         sa.Column("amfi_code", sa.String(length=16), nullable=True),
         sa.Column("isin", sa.String(length=12), nullable=True),
         sa.UniqueConstraint("kind", "identity"),

@@ -1,6 +1,24 @@
 {
   "components": {
     "schemas": {
+      "AssetClassOption": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "AssetClassOption",
+        "type": "object"
+      },
       "Body_commitImport": {
         "properties": {
           "file": {
@@ -39,6 +57,125 @@
           "file"
         ],
         "title": "Body_previewStatement",
+        "type": "object"
+      },
+      "DashboardPosition": {
+        "properties": {
+          "account": {
+            "title": "Account",
+            "type": "string"
+          },
+          "asset_class": {
+            "title": "Asset Class",
+            "type": "string"
+          },
+          "cost_basis": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cost Basis",
+            "type": "string"
+          },
+          "current_value": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Current Value",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "percent": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Percent",
+            "type": "string"
+          },
+          "scheme": {
+            "title": "Scheme",
+            "type": "string"
+          },
+          "units": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Units",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "scheme",
+          "account",
+          "asset_class",
+          "units",
+          "cost_basis",
+          "current_value",
+          "percent"
+        ],
+        "title": "DashboardPosition",
+        "type": "object"
+      },
+      "DashboardSummary": {
+        "properties": {
+          "absolute_return": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Absolute Return",
+            "type": "string"
+          },
+          "current_value": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Current Value",
+            "type": "string"
+          },
+          "invested": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Invested",
+            "type": "string"
+          },
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardPosition"
+            },
+            "title": "Positions",
+            "type": "array"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/NetWorthPoint"
+            },
+            "title": "Series",
+            "type": "array"
+          }
+        },
+        "required": [
+          "current_value",
+          "invested",
+          "absolute_return",
+          "series",
+          "positions"
+        ],
+        "title": "DashboardSummary",
+        "type": "object"
+      },
+      "FilterOptions": {
+        "properties": {
+          "asset_classes": {
+            "items": {
+              "$ref": "#/components/schemas/AssetClassOption"
+            },
+            "title": "Asset Classes",
+            "type": "array"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/MemberOption"
+            },
+            "title": "Members",
+            "type": "array"
+          }
+        },
+        "required": [
+          "members",
+          "asset_classes"
+        ],
+        "title": "FilterOptions",
         "type": "object"
       },
       "Folio": {
@@ -118,6 +255,45 @@
         "title": "ImportReceipt",
         "type": "object"
       },
+      "MemberOption": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "MemberOption",
+        "type": "object"
+      },
+      "NetWorthPoint": {
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "value": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "value"
+        ],
+        "title": "NetWorthPoint",
+        "type": "object"
+      },
       "ParserInfo": {
         "properties": {
           "name": {
@@ -139,6 +315,10 @@
       },
       "PositionSummary": {
         "properties": {
+          "asset_class": {
+            "title": "Asset Class",
+            "type": "string"
+          },
           "cost_basis": {
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Cost Basis",
@@ -172,6 +352,7 @@
           "scheme",
           "institution",
           "folio",
+          "asset_class",
           "units",
           "cost_basis"
         ],
@@ -581,6 +762,102 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/dashboard": {
+      "get": {
+        "description": "Net Worth over time and today's Positions, scoped by the filter bar.",
+        "operationId": "getDashboard",
+        "parameters": [
+          {
+            "description": "Household Member",
+            "in": "query",
+            "name": "member",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Household Member",
+              "title": "Member"
+            }
+          },
+          {
+            "description": "Asset Class",
+            "in": "query",
+            "name": "asset_class",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "equity",
+                    "debt",
+                    "gold",
+                    "real_estate",
+                    "cash",
+                    "crypto",
+                    "other"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Asset Class",
+              "title": "Asset Class"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Dashboard"
+      }
+    },
+    "/api/filters": {
+      "get": {
+        "description": "The Member and Asset Class dropdown options for the filter bar.",
+        "operationId": "getFilterOptions",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilterOptions"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Filters"
+      }
+    },
     "/api/health": {
       "get": {
         "operationId": "getHealth",

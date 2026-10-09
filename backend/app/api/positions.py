@@ -19,6 +19,7 @@ class PositionSummary(BaseModel):
     scheme: str
     institution: str
     folio: str
+    asset_class: str
     units: Decimal
     cost_basis: Decimal
 
@@ -30,6 +31,7 @@ class PositionSummary(BaseModel):
             scheme=position.instrument.name,
             institution=account.institution,
             folio=account.number,
+            asset_class=position.instrument.asset_class,
             units=position.units(),
             cost_basis=position.cost_basis(),
         )

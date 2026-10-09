@@ -9,6 +9,7 @@ from sqlalchemy import Dialect, ForeignKey, String, TypeDecorator, UniqueConstra
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+from app.ledger.asset_classes import OTHER
 
 PAISE = Decimal("0.01")
 ZERO = Decimal(0)
@@ -55,6 +56,7 @@ class Instrument(Base):
     kind: Mapped[str] = mapped_column(String(32))
     identity: Mapped[str] = mapped_column(String(64))
     name: Mapped[str] = mapped_column(String(255))
+    asset_class: Mapped[str] = mapped_column(String(32), default=OTHER)
     amfi_code: Mapped[str | None] = mapped_column(String(16))
     isin: Mapped[str | None] = mapped_column(String(12))
 
