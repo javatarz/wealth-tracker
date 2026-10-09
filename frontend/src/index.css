@@ -96,6 +96,23 @@ h4 {
   border-color: var(--ink);
 }
 
+.btn-link {
+  border: none;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  padding: 0;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.value {
+  font-size: 1.6rem;
+  font-variant-numeric: tabular-nums;
+  margin: 0.25rem 0;
+}
+
 .dropzone {
   border: 1.5px dashed var(--line);
   border-radius: 12px;
@@ -200,4 +217,28 @@ td {
 th.num,
 td.num {
   text-align: right;
+}
+
+.sections {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.btn[aria-current="page"] {
+  background: var(--ink);
+  color: var(--panel);
+  border-color: var(--ink);
+}
+
+.commit-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.commit-bar .callout {
+  margin: 0;
 }
