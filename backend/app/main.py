@@ -1,11 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import health, imports, positions, statements
+from app.api import goals, health, imports, positions, statements
+from app.api.goals import handle_rejection as handle_goal_rejection
 from app.api.rejections import handle_rejection
 from app.core.config import Settings, get_settings
 from app.core.frontend import SPAStaticFiles
 from app.core.statement_rejection import StatementRejectedError
+from app.goals.errors import GoalRejectedError
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -18,10 +20,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_headers=["*"],
     )
     app.add_exception_handler(StatementRejectedError, handle_rejection)
+    app.add_exception_handler(GoalRejectedError, handle_goal_rejection)
     app.include_router(health.router, prefix="/api")
     app.include_router(statements.router, prefix="/api")
     app.include_router(imports.router, prefix="/api")
     app.include_router(positions.router, prefix="/api")
+    app.include_router(goals.router, prefix="/api")
     if settings.static_dir is not None:
         app.mount("/", SPAStaticFiles(directory=settings.static_dir, html=True), name="frontend")
     return app

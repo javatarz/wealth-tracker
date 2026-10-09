@@ -54,6 +54,20 @@ describe("App", () => {
     expect(await screen.findByText(/Failed to fetch/)).toBeInTheDocument();
   });
 
+  it("opens the Goals tab from the Sections nav", async () => {
+    stubRoutes({
+      "GET /api/health": () => respond(200, { status: "ok" }),
+      "GET /api/positions": () => respond(200, []),
+      "GET /api/goals": () => respond(200, []),
+      "GET /api/accounts": () => respond(200, []),
+    });
+    render(<App />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Goals" }));
+
+    expect(await screen.findByText(/No Goals yet/)).toBeInTheDocument();
+  });
+
   it("commits a previewed statement and lands on its Positions", async () => {
     let committed = false;
     stubRoutes({

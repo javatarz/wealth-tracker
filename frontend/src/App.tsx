@@ -1,13 +1,15 @@
 import { useState, type ReactNode } from "react";
 
+import { GoalsList } from "./goals/GoalsList";
 import { HealthStatus } from "./HealthStatus";
 import { PositionsList } from "./positions/PositionsList";
 import { StatementImport } from "./statements/StatementImport";
 
-type View = "positions" | "import";
+type View = "positions" | "goals" | "import";
 
 const LABELS: Record<View, string> = {
   positions: "Positions",
+  goals: "Goals",
   import: "Import statement",
 };
 
@@ -19,6 +21,7 @@ export default function App() {
 
   const screens: Record<View, ReactNode> = {
     positions: <PositionsList onImport={show("import")} />,
+    goals: <GoalsList />,
     import: <StatementImport onCommitted={show("positions")} />,
   };
 

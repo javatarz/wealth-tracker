@@ -1,5 +1,6 @@
 from alembic import context
 
+import app.goals.models  # noqa: F401  # registers the goal tables on Base.metadata
 import app.ledger.models  # noqa: F401  # registers the ledger tables on Base.metadata
 from app.core.database import Base, get_engine
 

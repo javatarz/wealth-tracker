@@ -4,6 +4,59 @@
  */
 
 export interface paths {
+  "/api/accounts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Accounts */
+    get: operations["listAccounts"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/goals": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Goals */
+    get: operations["listGoals"];
+    put?: never;
+    /** Post Goal */
+    post: operations["createGoal"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/goals/{goal_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Put Goal */
+    put: operations["updateGoal"];
+    post?: never;
+    /** Delete Goal Route */
+    delete: operations["deleteGoal"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/health": {
     parameters: {
       query?: never;
@@ -82,6 +135,18 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** AccountSummary */
+    AccountSummary: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Institution */
+      institution: string;
+      /** Name */
+      name: string;
+    };
     /** Body_commitImport */
     Body_commitImport: {
       /**
@@ -116,6 +181,56 @@ export interface components {
       folio: string;
       /** Schemes */
       schemes: components["schemas"]["Scheme"][];
+    };
+    /** GoalError */
+    GoalError: {
+      /**
+       * Code
+       * @enum {string}
+       */
+      code: "goal_not_found" | "unknown_accounts";
+      /** Message */
+      message: string;
+    };
+    /** GoalSummary */
+    GoalSummary: {
+      /** Account Ids */
+      account_ids: string[];
+      /** Current Value */
+      current_value: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+      /** Percent Funded */
+      percent_funded: string;
+      /** Target Amount */
+      target_amount: string;
+      /**
+       * Target Date
+       * Format: date
+       */
+      target_date: string;
+    };
+    /**
+     * GoalWrite
+     * @description What the browser sends to create or edit a Goal.
+     */
+    GoalWrite: {
+      /** Account Ids */
+      account_ids?: string[];
+      /** Name */
+      name: string;
+      /** Target Amount */
+      target_amount: number | string;
+      /**
+       * Target Date
+       * Format: date
+       */
+      target_date: string;
     };
     /** HTTPValidationError */
     HTTPValidationError: {
@@ -317,6 +432,170 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  listAccounts: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AccountSummary"][];
+        };
+      };
+    };
+  };
+  listGoals: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GoalSummary"][];
+        };
+      };
+    };
+  };
+  createGoal: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["GoalWrite"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GoalError"];
+        };
+      };
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GoalError"];
+        };
+      };
+    };
+  };
+  updateGoal: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        goal_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["GoalWrite"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GoalError"];
+        };
+      };
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GoalError"];
+        };
+      };
+    };
+  };
+  deleteGoal: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        goal_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GoalError"];
+        };
+      };
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GoalError"];
+        };
+      };
+    };
+  };
   getHealth: {
     parameters: {
       query?: never;
