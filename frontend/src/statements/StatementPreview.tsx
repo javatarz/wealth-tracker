@@ -38,8 +38,8 @@ function PreviewHeader({ preview, fileName }: PreviewProps) {
         {preview.folios.length} folios · {schemeCount} schemes
       </p>
       <p className="muted small">
-        Parsed with {preview.parser.name} {preview.parser.version}. Preview only
-        — nothing has been saved.
+        Parsed with {preview.parser.name} {preview.parser.version}. Nothing is
+        saved until you commit the import.
       </p>
     </header>
   );
