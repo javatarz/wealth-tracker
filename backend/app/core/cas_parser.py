@@ -5,6 +5,7 @@ folio/scheme/transaction tree is returned; investor contact details and PAN
 are dropped at this boundary.
 """
 
+import hashlib
 import io
 import logging
 from dataclasses import dataclass
@@ -38,6 +39,9 @@ class StatementUpload:
     def ensure_pdf(self) -> None:
         if not self.content.startswith(_PDF_SIGNATURE):
             raise StatementParseError.not_a_pdf()
+
+    def fingerprint(self) -> str:
+        return hashlib.sha256(self.content).hexdigest()
 
     def password_error(self) -> StatementParseError:
         if self.password:
