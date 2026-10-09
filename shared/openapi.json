@@ -1,6 +1,26 @@
 {
   "components": {
     "schemas": {
+      "Body_commitImport": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "description": "CAMS/KFintech consolidated account statement",
+            "title": "File",
+            "type": "string"
+          },
+          "password": {
+            "default": "",
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_commitImport",
+        "type": "object"
+      },
       "Body_previewStatement": {
         "properties": {
           "file": {
@@ -74,6 +94,144 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "ImportReceipt": {
+        "properties": {
+          "import_id": {
+            "format": "uuid",
+            "title": "Import Id",
+            "type": "string"
+          },
+          "positions": {
+            "title": "Positions",
+            "type": "integer"
+          },
+          "transactions": {
+            "title": "Transactions",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "import_id",
+          "positions",
+          "transactions"
+        ],
+        "title": "ImportReceipt",
+        "type": "object"
+      },
+      "LedgerEntry": {
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "synthetic": {
+            "title": "Synthetic",
+            "type": "boolean"
+          },
+          "units": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Units",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "kind",
+          "description",
+          "units",
+          "amount",
+          "notes",
+          "synthetic"
+        ],
+        "title": "LedgerEntry",
+        "type": "object"
+      },
+      "ManualTransactionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "notes": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Notes",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "units": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Units"
+          }
+        },
+        "required": [
+          "type",
+          "date",
+          "units"
+        ],
+        "title": "ManualTransactionRequest",
+        "type": "object"
+      },
       "ParserInfo": {
         "properties": {
           "name": {
@@ -91,6 +249,110 @@
           "version"
         ],
         "title": "ParserInfo",
+        "type": "object"
+      },
+      "PositionDetail": {
+        "description": "A Position with its full ledger and the Transaction types it accepts.",
+        "properties": {
+          "allowed_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Types",
+            "type": "array"
+          },
+          "cost_basis": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cost Basis",
+            "type": "string"
+          },
+          "folio": {
+            "title": "Folio",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "institution": {
+            "title": "Institution",
+            "type": "string"
+          },
+          "instrument_kind": {
+            "title": "Instrument Kind",
+            "type": "string"
+          },
+          "scheme": {
+            "title": "Scheme",
+            "type": "string"
+          },
+          "transactions": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerEntry"
+            },
+            "title": "Transactions",
+            "type": "array"
+          },
+          "units": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Units",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "scheme",
+          "institution",
+          "folio",
+          "units",
+          "cost_basis",
+          "instrument_kind",
+          "allowed_types",
+          "transactions"
+        ],
+        "title": "PositionDetail",
+        "type": "object"
+      },
+      "PositionSummary": {
+        "properties": {
+          "cost_basis": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cost Basis",
+            "type": "string"
+          },
+          "folio": {
+            "title": "Folio",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "institution": {
+            "title": "Institution",
+            "type": "string"
+          },
+          "scheme": {
+            "title": "Scheme",
+            "type": "string"
+          },
+          "units": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Units",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "scheme",
+          "institution",
+          "folio",
+          "units",
+          "cost_basis"
+        ],
+        "title": "PositionSummary",
         "type": "object"
       },
       "Scheme": {
@@ -210,7 +472,22 @@
                 "type": "string"
               },
               {
-                "const": "file_too_large",
+                "enum": [
+                  "unexpected_type",
+                  "future_date",
+                  "non_positive_units",
+                  "negative_cost",
+                  "cost_required",
+                  "position_not_found"
+                ],
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "file_too_large",
+                  "already_imported",
+                  "commit_failed"
+                ],
                 "type": "string"
               }
             ],
@@ -508,6 +785,228 @@
           }
         },
         "summary": "Get Health"
+      }
+    },
+    "/api/imports": {
+      "post": {
+        "description": "Parse a statement PDF and add it to the ledger. The PDF itself is not kept.",
+        "operationId": "commitImport",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_commitImport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportReceipt"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementError"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementError"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementError"
+                }
+              }
+            },
+            "description": "Content Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementError"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Commit Import"
+      }
+    },
+    "/api/positions": {
+      "get": {
+        "operationId": "listPositions",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PositionSummary"
+                  },
+                  "title": "Response Listpositions",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Positions"
+      }
+    },
+    "/api/positions/{position_id}": {
+      "get": {
+        "operationId": "getPosition",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "position_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Position Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PositionDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Position"
+      }
+    },
+    "/api/positions/{position_id}/transactions": {
+      "post": {
+        "description": "Add a Transaction the user entered by hand. Units and cost basis update at once.",
+        "operationId": "createTransaction",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "position_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Position Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualTransactionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PositionDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementError"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Transaction"
       }
     },
     "/api/statements/preview": {

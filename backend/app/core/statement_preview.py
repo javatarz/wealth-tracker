@@ -6,14 +6,7 @@ from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field
 
-ParseErrorCode = Literal[
-    "not_a_pdf",
-    "password_required",
-    "incorrect_password",
-    "unrecognised_statement",
-    "unsupported_statement",
-    "parse_failed",
-]
+from app.core.statement_rejection import StatementRejectedError
 
 TransactionType = Literal[
     "PURCHASE",
@@ -118,12 +111,7 @@ class StatementPreview(ParsedStatement):
     parser: ParserInfo
 
 
-class StatementParseError(Exception):
-    def __init__(self, code: ParseErrorCode, message: str) -> None:
-        super().__init__(message)
-        self.code: ParseErrorCode = code
-        self.message = message
-
+class StatementParseError(StatementRejectedError):
     @classmethod
     def not_a_pdf(cls) -> Self:
         return cls("not_a_pdf", "This file isn't a PDF.")

@@ -201,3 +201,58 @@ th.num,
 td.num {
   text-align: right;
 }
+
+.sections {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.btn[aria-current="page"] {
+  background: var(--ink);
+  color: var(--panel);
+  border-color: var(--ink);
+}
+
+.commit-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.commit-bar .callout {
+  margin: 0;
+}
+
+.add-transaction {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1rem;
+  margin: 1rem 0;
+  max-width: 32rem;
+}
+
+.add-transaction .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.add-transaction input,
+.add-transaction select {
+  font: inherit;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.add-transaction h3 {
+  margin-top: 0;
+}
+
+.position-summary {
+  margin: 0.5rem 0 1rem;
+}

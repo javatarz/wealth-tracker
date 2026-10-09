@@ -21,6 +21,80 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/imports": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Commit Import
+     * @description Parse a statement PDF and add it to the ledger. The PDF itself is not kept.
+     */
+    post: operations["commitImport"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/positions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Positions */
+    get: operations["listPositions"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/positions/{position_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Position */
+    get: operations["getPosition"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/positions/{position_id}/transactions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Create Transaction
+     * @description Add a Transaction the user entered by hand. Units and cost basis update at once.
+     */
+    post: operations["createTransaction"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/statements/preview": {
     parameters: {
       query?: never;
@@ -45,6 +119,19 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** Body_commitImport */
+    Body_commitImport: {
+      /**
+       * File
+       * @description CAMS/KFintech consolidated account statement
+       */
+      file: string;
+      /**
+       * Password
+       * @default
+       */
+      password: string;
+    };
     /** Body_previewStatement */
     Body_previewStatement: {
       /**
@@ -80,6 +167,57 @@ export interface components {
        */
       status: "ok";
     };
+    /** ImportReceipt */
+    ImportReceipt: {
+      /**
+       * Import Id
+       * Format: uuid
+       */
+      import_id: string;
+      /** Positions */
+      positions: number;
+      /** Transactions */
+      transactions: number;
+    };
+    /** LedgerEntry */
+    LedgerEntry: {
+      /** Amount */
+      amount: string | null;
+      /**
+       * Date
+       * Format: date
+       */
+      date: string;
+      /** Description */
+      description: string;
+      /** Kind */
+      kind: string;
+      /** Notes */
+      notes: string | null;
+      /** Synthetic */
+      synthetic: boolean;
+      /** Units */
+      units: string;
+    };
+    /** ManualTransactionRequest */
+    ManualTransactionRequest: {
+      /** Amount */
+      amount?: number | string | null;
+      /**
+       * Date
+       * Format: date
+       */
+      date: string;
+      /**
+       * Notes
+       * @default
+       */
+      notes: string;
+      /** Type */
+      type: string;
+      /** Units */
+      units: number | string;
+    };
     /** ParserInfo */
     ParserInfo: {
       /**
@@ -89,6 +227,51 @@ export interface components {
       name: "casparser";
       /** Version */
       version: string;
+    };
+    /**
+     * PositionDetail
+     * @description A Position with its full ledger and the Transaction types it accepts.
+     */
+    PositionDetail: {
+      /** Allowed Types */
+      allowed_types: string[];
+      /** Cost Basis */
+      cost_basis: string;
+      /** Folio */
+      folio: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Institution */
+      institution: string;
+      /** Instrument Kind */
+      instrument_kind: string;
+      /** Scheme */
+      scheme: string;
+      /** Transactions */
+      transactions: components["schemas"]["LedgerEntry"][];
+      /** Units */
+      units: string;
+    };
+    /** PositionSummary */
+    PositionSummary: {
+      /** Cost Basis */
+      cost_basis: string;
+      /** Folio */
+      folio: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Institution */
+      institution: string;
+      /** Scheme */
+      scheme: string;
+      /** Units */
+      units: string;
     };
     /** Scheme */
     Scheme: {
@@ -128,7 +311,15 @@ export interface components {
             | "unsupported_statement"
             | "parse_failed"
           )
-        | "file_too_large";
+        | (
+            | "unexpected_type"
+            | "future_date"
+            | "non_positive_units"
+            | "negative_cost"
+            | "cost_required"
+            | "position_not_found"
+          )
+        | ("file_too_large" | "already_imported" | "commit_failed");
       /** Message */
       message: string;
     };
@@ -253,6 +444,188 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HealthResponse"];
+        };
+      };
+    };
+  };
+  commitImport: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_commitImport"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ImportReceipt"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StatementError"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StatementError"];
+        };
+      };
+      /** @description Content Too Large */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StatementError"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StatementError"];
+        };
+      };
+    };
+  };
+  listPositions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PositionSummary"][];
+        };
+      };
+    };
+  };
+  getPosition: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        position_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PositionDetail"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StatementError"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  createTransaction: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        position_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ManualTransactionRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PositionDetail"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StatementError"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StatementError"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
