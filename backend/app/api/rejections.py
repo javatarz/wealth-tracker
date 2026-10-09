@@ -7,6 +7,7 @@ _STATUS_BY_CODE: dict[RejectionCode, int] = {
     "file_too_large": status.HTTP_413_CONTENT_TOO_LARGE,
     "already_imported": status.HTTP_409_CONFLICT,
     "commit_failed": status.HTTP_500_INTERNAL_SERVER_ERROR,
+    "position_not_found": status.HTTP_404_NOT_FOUND,
 }
 
 

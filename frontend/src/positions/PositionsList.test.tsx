@@ -32,22 +32,39 @@ describe("PositionsList", () => {
   it("lists each Position with its Account, units and cost basis", async () => {
     stubRoutes({ "GET /api/positions": () => respond(200, positions) });
 
-    render(<PositionsList onImport={vi.fn()} />);
+    render(<PositionsList onImport={vi.fn()} onOpen={vi.fn()} />);
 
     const sbi = await screen.findByRole("row", { name: /SBI Equity Hybrid/ });
     expect(
       within(sbi)
         .getAllByRole("cell")
         .map((c) => c.textContent),
-    ).toEqual(["SBI Mutual Fund · 9876543210", "564.781", "45,135.00"]);
+    ).toEqual([
+      "SBI Mutual Fund · 9876543210",
+      "564.781",
+      "45,135.00",
+      "Open SBI Equity Hybrid Fund - Direct Plan - Growth",
+    ]);
     expect(screen.getAllByRole("row")).toHaveLength(3);
+  });
+
+  it("opens a Position's detail screen when its row is opened", async () => {
+    stubRoutes({ "GET /api/positions": () => respond(200, positions) });
+    const onOpen = vi.fn();
+
+    render(<PositionsList onImport={vi.fn()} onOpen={onOpen} />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Open SBI Equity Hybrid/ }),
+    );
+
+    expect(onOpen).toHaveBeenCalledWith(positions[1]?.id);
   });
 
   it("offers an import when there are no Positions yet", async () => {
     stubRoutes({ "GET /api/positions": () => respond(200, []) });
     const onImport = vi.fn();
 
-    render(<PositionsList onImport={onImport} />);
+    render(<PositionsList onImport={onImport} onOpen={vi.fn()} />);
     await userEvent.click(
       await screen.findByRole("button", { name: "Import a statement" }),
     );
@@ -61,7 +78,7 @@ describe("PositionsList", () => {
       vi.fn(() => Promise.reject(new TypeError("Failed to fetch"))),
     );
 
-    render(<PositionsList onImport={vi.fn()} />);
+    render(<PositionsList onImport={vi.fn()} onOpen={vi.fn()} />);
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Couldn't reach the Wealth Tracker server.",

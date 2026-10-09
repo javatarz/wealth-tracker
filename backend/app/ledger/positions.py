@@ -15,3 +15,12 @@ def list_positions(session: Session) -> Sequence[Position]:
         .order_by(Account.institution, Account.number, Instrument.name)
     )
     return session.scalars(query).all()
+
+
+def find_position(session: Session, position_id: object) -> Position | None:
+    query = (
+        select(Position)
+        .where(Position.id == position_id)
+        .options(selectinload(Position.transactions), selectinload(Position.lots))
+    )
+    return session.scalars(query).first()

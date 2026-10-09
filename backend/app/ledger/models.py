@@ -118,6 +118,7 @@ class Transaction(Base):
     units: Mapped[Decimal] = mapped_column(DecimalText())
     amount: Mapped[Decimal | None] = mapped_column(DecimalText())
     nav: Mapped[Decimal | None] = mapped_column(DecimalText())
+    notes: Mapped[str | None] = mapped_column(String(500))
     synthetic: Mapped[bool] = mapped_column(default=False)
     fingerprint: Mapped[str | None] = mapped_column(String(64), unique=True)
 

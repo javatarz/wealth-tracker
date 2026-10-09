@@ -8,8 +8,13 @@ type Kind = PositionsState["kind"];
 type StateOf<K extends Kind> = Extract<PositionsState, { kind: K }>;
 type View<K extends Kind> = (
   state: StateOf<K>,
-  onImport: () => void,
+  actions: ListActions,
 ) => ReactNode;
+
+export interface ListActions {
+  import: () => void;
+  open: (positionId: string) => void;
+}
 
 const views: { [K in Kind]: View<K> } = {
   loading: () => (
@@ -22,29 +27,35 @@ const views: { [K in Kind]: View<K> } = {
       {message}
     </p>
   ),
-  ok: ({ positions }, onImport) =>
+  ok: ({ positions }, actions) =>
     positions.length === 0 ? (
-      <NoPositions onImport={onImport} />
+      <NoPositions onImport={actions.import} />
     ) : (
-      <PositionsTable positions={positions} />
+      <PositionsTable positions={positions} onOpen={actions.open} />
     ),
 };
 
 function renderView<K extends Kind>(
   kind: K,
   state: StateOf<K>,
-  onImport: () => void,
+  actions: ListActions,
 ): ReactNode {
-  return views[kind](state, onImport);
+  return views[kind](state, actions);
 }
 
-export function PositionsList({ onImport }: { onImport: () => void }) {
+export function PositionsList({
+  onImport,
+  onOpen,
+}: {
+  onImport: () => void;
+  onOpen: (positionId: string) => void;
+}) {
   const state = usePositions();
 
   return (
     <section aria-labelledby="positions-heading">
       <h2 id="positions-heading">Positions</h2>
-      {renderView(state.kind, state, onImport)}
+      {renderView(state.kind, state, { import: onImport, open: onOpen })}
     </section>
   );
 }
@@ -60,7 +71,13 @@ function NoPositions({ onImport }: { onImport: () => void }) {
   );
 }
 
-function PositionsTable({ positions }: { positions: PositionSummary[] }) {
+function PositionsTable({
+  positions,
+  onOpen,
+}: {
+  positions: PositionSummary[];
+  onOpen: (positionId: string) => void;
+}) {
   return (
     <table>
       <thead>
@@ -73,18 +90,27 @@ function PositionsTable({ positions }: { positions: PositionSummary[] }) {
           <th scope="col" className="num">
             Cost basis (₹)
           </th>
+          <th scope="col">
+            <span className="visually-hidden">Actions</span>
+          </th>
         </tr>
       </thead>
       <tbody>
         {positions.map((position) => (
-          <PositionRow key={position.id} position={position} />
+          <PositionRow key={position.id} position={position} onOpen={onOpen} />
         ))}
       </tbody>
     </table>
   );
 }
 
-function PositionRow({ position }: { position: PositionSummary }) {
+function PositionRow({
+  position,
+  onOpen,
+}: {
+  position: PositionSummary;
+  onOpen: (positionId: string) => void;
+}) {
   return (
     <tr>
       <th scope="row">{position.scheme}</th>
@@ -93,6 +119,17 @@ function PositionRow({ position }: { position: PositionSummary }) {
       </td>
       <td className="num">{formatDecimal(position.units)}</td>
       <td className="num">{formatDecimal(position.cost_basis)}</td>
+      <td>
+        <button
+          type="button"
+          className="btn"
+          onClick={() => {
+            onOpen(position.id);
+          }}
+        >
+          Open <span className="visually-hidden">{position.scheme}</span>
+        </button>
+      </td>
     </tr>
   );
 }

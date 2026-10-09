@@ -11,7 +11,20 @@ ParseErrorCode = Literal[
     "parse_failed",
 ]
 
-RejectionCode = ParseErrorCode | Literal["file_too_large", "already_imported", "commit_failed"]
+ManualEntryCode = Literal[
+    "unexpected_type",
+    "future_date",
+    "non_positive_units",
+    "negative_cost",
+    "cost_required",
+    "position_not_found",
+]
+
+RejectionCode = (
+    ParseErrorCode
+    | ManualEntryCode
+    | Literal["file_too_large", "already_imported", "commit_failed"]
+)
 
 
 class StatementRejectedError(Exception):
