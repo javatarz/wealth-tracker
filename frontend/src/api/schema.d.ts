@@ -4,6 +4,59 @@
  */
 
 export interface paths {
+  "/api/accounts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Accounts */
+    get: operations["listAccounts"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/goals": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Goals */
+    get: operations["listGoals"];
+    put?: never;
+    /** Post Goal */
+    post: operations["createGoal"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/goals/{goal_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Put Goal */
+    put: operations["updateGoal"];
+    post?: never;
+    /** Delete Goal Route */
+    delete: operations["deleteGoal"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/health": {
     parameters: {
       query?: never;
@@ -13,6 +66,43 @@ export interface paths {
     };
     /** Get Health */
     get: operations["getHealth"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/imports": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Commit Import
+     * @description Parse a statement PDF and add it to the ledger. The PDF itself is not kept.
+     */
+    post: operations["commitImport"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/positions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Positions */
+    get: operations["listPositions"];
     put?: never;
     post?: never;
     delete?: never;
@@ -45,6 +135,31 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** AccountSummary */
+    AccountSummary: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Institution */
+      institution: string;
+      /** Name */
+      name: string;
+    };
+    /** Body_commitImport */
+    Body_commitImport: {
+      /**
+       * File
+       * @description CAMS/KFintech consolidated account statement
+       */
+      file: string;
+      /**
+       * Password
+       * @default
+       */
+      password: string;
+    };
     /** Body_previewStatement */
     Body_previewStatement: {
       /**
@@ -67,6 +182,56 @@ export interface components {
       /** Schemes */
       schemes: components["schemas"]["Scheme"][];
     };
+    /** GoalError */
+    GoalError: {
+      /**
+       * Code
+       * @enum {string}
+       */
+      code: "goal_not_found" | "unknown_accounts";
+      /** Message */
+      message: string;
+    };
+    /** GoalSummary */
+    GoalSummary: {
+      /** Account Ids */
+      account_ids: string[];
+      /** Current Value */
+      current_value: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+      /** Percent Funded */
+      percent_funded: string;
+      /** Target Amount */
+      target_amount: string;
+      /**
+       * Target Date
+       * Format: date
+       */
+      target_date: string;
+    };
+    /**
+     * GoalWrite
+     * @description What the browser sends to create or edit a Goal.
+     */
+    GoalWrite: {
+      /** Account Ids */
+      account_ids?: string[];
+      /** Name */
+      name: string;
+      /** Target Amount */
+      target_amount: number | string;
+      /**
+       * Target Date
+       * Format: date
+       */
+      target_date: string;
+    };
     /** HTTPValidationError */
     HTTPValidationError: {
       /** Detail */
@@ -80,6 +245,18 @@ export interface components {
        */
       status: "ok";
     };
+    /** ImportReceipt */
+    ImportReceipt: {
+      /**
+       * Import Id
+       * Format: uuid
+       */
+      import_id: string;
+      /** Positions */
+      positions: number;
+      /** Transactions */
+      transactions: number;
+    };
     /** ParserInfo */
     ParserInfo: {
       /**
@@ -89,6 +266,24 @@ export interface components {
       name: "casparser";
       /** Version */
       version: string;
+    };
+    /** PositionSummary */
+    PositionSummary: {
+      /** Cost Basis */
+      cost_basis: string;
+      /** Folio */
+      folio: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Institution */
+      institution: string;
+      /** Scheme */
+      scheme: string;
+      /** Units */
+      units: string;
     };
     /** Scheme */
     Scheme: {
@@ -128,7 +323,7 @@ export interface components {
             | "unsupported_statement"
             | "parse_failed"
           )
-        | "file_too_large";
+        | ("file_too_large" | "already_imported" | "commit_failed");
       /** Message */
       message: string;
     };
@@ -237,6 +432,170 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  listAccounts: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AccountSummary"][];
+        };
+      };
+    };
+  };
+  listGoals: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GoalSummary"][];
+        };
+      };
+    };
+  };
+  createGoal: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["GoalWrite"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GoalError"];
+        };
+      };
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GoalError"];
+        };
+      };
+    };
+  };
+  updateGoal: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        goal_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["GoalWrite"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GoalError"];
+        };
+      };
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GoalError"];
+        };
+      };
+    };
+  };
+  deleteGoal: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        goal_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GoalError"];
+        };
+      };
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GoalError"];
+        };
+      };
+    };
+  };
   getHealth: {
     parameters: {
       query?: never;
@@ -253,6 +612,95 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HealthResponse"];
+        };
+      };
+    };
+  };
+  commitImport: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_commitImport"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ImportReceipt"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StatementError"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StatementError"];
+        };
+      };
+      /** @description Content Too Large */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StatementError"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StatementError"];
+        };
+      };
+    };
+  };
+  listPositions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PositionSummary"][];
         };
       };
     };
