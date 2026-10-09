@@ -127,8 +127,28 @@ describe("GoalsList", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Delete" }),
     );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Confirm delete" }),
+    );
 
     expect(await screen.findByText(/No Goals yet/)).toBeInTheDocument();
+  });
+
+  it("keeps a Goal when the delete is not confirmed", async () => {
+    stubRoutes({
+      "GET /api/goals": () => respond(200, [goal]),
+      "GET /api/accounts": () => respond(200, [account]),
+    });
+    render(<GoalsList />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Delete" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Keep" }));
+
+    expect(
+      screen.getByRole("heading", { name: "New Car" }),
+    ).toBeInTheDocument();
   });
 
   it("says so when the server can't be reached", async () => {

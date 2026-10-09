@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { formatDecimal } from "../statements/formatDecimal";
 import { deleteGoal } from "./goalCommands";
 import type { GoalSummary } from "./listGoals";
@@ -18,29 +20,28 @@ export function GoalCards({ goals, onEdit, onDelete }: GoalCardsProps) {
         <GoalCard
           key={goal.id}
           goal={goal}
-          onEdit={() => {
-            onEdit(goal);
-          }}
-          onDelete={() => {
-            void deleteGoal(goal.id).then(() => {
-              onDelete();
-            });
-          }}
+          onEdit={onEdit}
+          onDelete={onDelete}
         />
       ))}
     </div>
   );
 }
 
-function GoalCard({
-  goal,
-  onEdit,
-  onDelete,
-}: {
+interface GoalCardProps {
   goal: GoalSummary;
-  onEdit: () => void;
+  onEdit: (goal: GoalSummary) => void;
   onDelete: () => void;
-}) {
+}
+
+function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
+  const [confirming, setConfirming] = useState(false);
+
+  const remove = async () => {
+    await deleteGoal(goal.id);
+    onDelete();
+  };
+
   return (
     <article className="goal-card">
       <header className="goal-card-head">
@@ -57,15 +58,59 @@ function GoalCard({
         {formatDecimal(goal.target_amount)} ·{" "}
         {formatDecimal(goal.percent_funded)}%
       </p>
-      <div className="goal-card-actions">
-        <button type="button" className="btn" onClick={onEdit}>
-          Edit
-        </button>
-        <button type="button" className="btn" onClick={onDelete}>
+      <GoalCardActions
+        confirming={confirming}
+        onEdit={() => {
+          onEdit(goal);
+        }}
+        onAsk={() => {
+          setConfirming(true);
+        }}
+        onCancel={() => {
+          setConfirming(false);
+        }}
+        onConfirm={() => void remove()}
+      />
+    </article>
+  );
+}
+
+interface ActionsProps {
+  confirming: boolean;
+  onEdit: () => void;
+  onAsk: () => void;
+  onCancel: () => void;
+  onConfirm: () => void;
+}
+
+function GoalCardActions({
+  confirming,
+  onEdit,
+  onAsk,
+  onCancel,
+  onConfirm,
+}: ActionsProps) {
+  return (
+    <div className="goal-card-actions">
+      <button type="button" className="btn" onClick={onEdit}>
+        Edit
+      </button>
+      {confirming ? (
+        <>
+          <span className="muted small">Delete this Goal?</span>
+          <button type="button" className="btn bad-text" onClick={onConfirm}>
+            Confirm delete
+          </button>
+          <button type="button" className="btn" onClick={onCancel}>
+            Keep
+          </button>
+        </>
+      ) : (
+        <button type="button" className="btn" onClick={onAsk}>
           Delete
         </button>
-      </div>
-    </article>
+      )}
+    </div>
   );
 }
 
