@@ -1,6 +1,54 @@
 {
   "components": {
     "schemas": {
+      "Action": {
+        "enum": [
+          "trust_ledger",
+          "trust_statement",
+          "leave_out"
+        ],
+        "title": "Action",
+        "type": "string"
+      },
+      "Body_commitImport": {
+        "properties": {
+          "decisions": {
+            "anyOf": [
+              {
+                "contentMediaType": "application/json",
+                "contentSchema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/Action"
+                  },
+                  "type": "object"
+                },
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "JSON object mapping each mismatch's holding to an Action",
+            "title": "Decisions"
+          },
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "description": "CAMS/KFintech consolidated account statement",
+            "title": "File",
+            "type": "string"
+          },
+          "password": {
+            "default": "",
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_commitImport",
+        "type": "object"
+      },
       "Body_previewStatement": {
         "properties": {
           "file": {
@@ -19,6 +67,29 @@
           "file"
         ],
         "title": "Body_previewStatement",
+        "type": "object"
+      },
+      "DecisionsRequired": {
+        "description": "Nothing was saved. Commit again with an Action for every mismatch.",
+        "properties": {
+          "mismatches": {
+            "items": {
+              "$ref": "#/components/schemas/Mismatch"
+            },
+            "title": "Mismatches",
+            "type": "array"
+          },
+          "outcome": {
+            "const": "needs_decisions",
+            "title": "Outcome",
+            "type": "string"
+          }
+        },
+        "required": [
+          "outcome",
+          "mismatches"
+        ],
+        "title": "DecisionsRequired",
         "type": "object"
       },
       "Folio": {
@@ -74,6 +145,83 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "ImportReceipt": {
+        "properties": {
+          "import_id": {
+            "format": "uuid",
+            "title": "Import Id",
+            "type": "string"
+          },
+          "outcome": {
+            "const": "committed",
+            "title": "Outcome",
+            "type": "string"
+          },
+          "positions": {
+            "title": "Positions",
+            "type": "integer"
+          },
+          "transactions": {
+            "title": "Transactions",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "outcome",
+          "import_id",
+          "positions",
+          "transactions"
+        ],
+        "title": "ImportReceipt",
+        "type": "object"
+      },
+      "Mismatch": {
+        "description": "A Scheme whose printed closing units differ from the units the ledger would derive.",
+        "properties": {
+          "delta": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Delta",
+            "type": "string"
+          },
+          "derived_units": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Derived Units",
+            "type": "string"
+          },
+          "folio": {
+            "title": "Folio",
+            "type": "string"
+          },
+          "holding": {
+            "title": "Holding",
+            "type": "string"
+          },
+          "institution": {
+            "title": "Institution",
+            "type": "string"
+          },
+          "printed_units": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Printed Units",
+            "type": "string"
+          },
+          "scheme": {
+            "title": "Scheme",
+            "type": "string"
+          }
+        },
+        "required": [
+          "holding",
+          "scheme",
+          "institution",
+          "folio",
+          "printed_units",
+          "derived_units",
+          "delta"
+        ],
+        "title": "Mismatch",
+        "type": "object"
+      },
       "ParserInfo": {
         "properties": {
           "name": {
@@ -91,6 +239,47 @@
           "version"
         ],
         "title": "ParserInfo",
+        "type": "object"
+      },
+      "PositionSummary": {
+        "properties": {
+          "cost_basis": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cost Basis",
+            "type": "string"
+          },
+          "folio": {
+            "title": "Folio",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "institution": {
+            "title": "Institution",
+            "type": "string"
+          },
+          "scheme": {
+            "title": "Scheme",
+            "type": "string"
+          },
+          "units": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Units",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "scheme",
+          "institution",
+          "folio",
+          "units",
+          "cost_basis"
+        ],
+        "title": "PositionSummary",
         "type": "object"
       },
       "Scheme": {
@@ -210,7 +399,11 @@
                 "type": "string"
               },
               {
-                "const": "file_too_large",
+                "enum": [
+                  "file_too_large",
+                  "already_imported",
+                  "commit_failed"
+                ],
                 "type": "string"
               }
             ],
@@ -508,6 +701,122 @@
           }
         },
         "summary": "Get Health"
+      }
+    },
+    "/api/imports": {
+      "post": {
+        "description": "Parse a statement PDF and add it to the ledger. The PDF itself is not kept.\n\nIf any Scheme's closing units disagree with the ledger, nothing is saved and the\nmismatches come back; commit again with a decision for each (ADR 0027).",
+        "operationId": "commitImport",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_commitImport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "discriminator": {
+                    "mapping": {
+                      "committed": "#/components/schemas/ImportReceipt",
+                      "needs_decisions": "#/components/schemas/DecisionsRequired"
+                    },
+                    "propertyName": "outcome"
+                  },
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ImportReceipt"
+                    },
+                    {
+                      "$ref": "#/components/schemas/DecisionsRequired"
+                    }
+                  ],
+                  "title": "Response Commitimport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementError"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementError"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementError"
+                }
+              }
+            },
+            "description": "Content Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementError"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Commit Import"
+      }
+    },
+    "/api/positions": {
+      "get": {
+        "operationId": "listPositions",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PositionSummary"
+                  },
+                  "title": "Response Listpositions",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Positions"
       }
     },
     "/api/statements/preview": {

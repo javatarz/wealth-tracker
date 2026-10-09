@@ -21,6 +21,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/imports": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Commit Import
+     * @description Parse a statement PDF and add it to the ledger. The PDF itself is not kept.
+     *
+     *     If any Scheme's closing units disagree with the ledger, nothing is saved and the
+     *     mismatches come back; commit again with a decision for each (ADR 0027).
+     */
+    post: operations["commitImport"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/positions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Positions */
+    get: operations["listPositions"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/statements/preview": {
     parameters: {
       query?: never;
@@ -45,6 +85,29 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /**
+     * Action
+     * @enum {string}
+     */
+    Action: "trust_ledger" | "trust_statement" | "leave_out";
+    /** Body_commitImport */
+    Body_commitImport: {
+      /**
+       * Decisions
+       * @description JSON object mapping each mismatch's holding to an Action
+       */
+      decisions?: string | null;
+      /**
+       * File
+       * @description CAMS/KFintech consolidated account statement
+       */
+      file: string;
+      /**
+       * Password
+       * @default
+       */
+      password: string;
+    };
     /** Body_previewStatement */
     Body_previewStatement: {
       /**
@@ -57,6 +120,19 @@ export interface components {
        * @default
        */
       password: string;
+    };
+    /**
+     * DecisionsRequired
+     * @description Nothing was saved. Commit again with an Action for every mismatch.
+     */
+    DecisionsRequired: {
+      /** Mismatches */
+      mismatches: components["schemas"]["Mismatch"][];
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      outcome: "needs_decisions";
     };
     /** Folio */
     Folio: {
@@ -80,6 +156,43 @@ export interface components {
        */
       status: "ok";
     };
+    /** ImportReceipt */
+    ImportReceipt: {
+      /**
+       * Import Id
+       * Format: uuid
+       */
+      import_id: string;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      outcome: "committed";
+      /** Positions */
+      positions: number;
+      /** Transactions */
+      transactions: number;
+    };
+    /**
+     * Mismatch
+     * @description A Scheme whose printed closing units differ from the units the ledger would derive.
+     */
+    Mismatch: {
+      /** Delta */
+      delta: string;
+      /** Derived Units */
+      derived_units: string;
+      /** Folio */
+      folio: string;
+      /** Holding */
+      holding: string;
+      /** Institution */
+      institution: string;
+      /** Printed Units */
+      printed_units: string;
+      /** Scheme */
+      scheme: string;
+    };
     /** ParserInfo */
     ParserInfo: {
       /**
@@ -89,6 +202,24 @@ export interface components {
       name: "casparser";
       /** Version */
       version: string;
+    };
+    /** PositionSummary */
+    PositionSummary: {
+      /** Cost Basis */
+      cost_basis: string;
+      /** Folio */
+      folio: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Institution */
+      institution: string;
+      /** Scheme */
+      scheme: string;
+      /** Units */
+      units: string;
     };
     /** Scheme */
     Scheme: {
@@ -128,7 +259,7 @@ export interface components {
             | "unsupported_statement"
             | "parse_failed"
           )
-        | "file_too_large";
+        | ("file_too_large" | "already_imported" | "commit_failed");
       /** Message */
       message: string;
     };
@@ -253,6 +384,97 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HealthResponse"];
+        };
+      };
+    };
+  };
+  commitImport: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_commitImport"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json":
+            | components["schemas"]["ImportReceipt"]
+            | components["schemas"]["DecisionsRequired"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StatementError"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StatementError"];
+        };
+      };
+      /** @description Content Too Large */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StatementError"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StatementError"];
+        };
+      };
+    };
+  };
+  listPositions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PositionSummary"][];
         };
       };
     };

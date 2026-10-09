@@ -91,6 +91,18 @@ sqlite_cache = true
 module = "tests.*"
 disallow_any_expr = false
 
+# SQLAlchemy ORM classes carry Any from DeclarativeBase, so every expression that
+# names a mapped class trips disallow_any_expr. Keep ORM access in these modules.
+[[tool.mypy.overrides]]
+module = [
+  "app.ledger.holdings",
+  "app.ledger.models",
+  "app.ledger.positions",
+  "app.ledger.reconciliation",
+  "app.ledger.statement_commit",
+]
+disallow_any_expr = false
+
 [tool.pydantic-mypy]
 init_forbid_extra = true
 init_typed = true
